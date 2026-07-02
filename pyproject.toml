@@ -74,6 +74,7 @@ include = [
     "/main.py",
     "/alembic.ini",
     "/README.md",
+    "/CHANGELOG.md",
     "/PROTOCOL.md",
     "/LICENSE",
     "/.env.example",
