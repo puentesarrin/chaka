@@ -2,6 +2,9 @@
 
 > **Chaka** means "bridge" in Quechua.
 
+[![PyPI](https://img.shields.io/pypi/v/chaka.svg)](https://pypi.org/project/chaka/)
+[![CI](https://github.com/puentesarrin/chaka/actions/workflows/ci.yml/badge.svg)](https://github.com/puentesarrin/chaka/actions/workflows/ci.yml)
+
 Chaka is a self-hosted, real-time **relay server** for notifications and voice over a single WebSocket. Sender clients publish notification payloads (or stream push-to-talk audio); receiver clients get them in real time. It is a small, dependency-light FastAPI application with a server-rendered admin UI for managing access tokens, channels, and logs.
 
 It is transport-agnostic about *what* you relay — any JSON notification payload and any binary audio stream. The reference clients are Android apps (a notification forwarder and a receiver), but any WebSocket or HTTP client that follows [the protocol](PROTOCOL.md) works.
