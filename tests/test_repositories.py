@@ -106,6 +106,7 @@ async def test_notification_record_replay_noop_when_empty(fake_session):
         token_id=1, token_name='t', notification_ids=[], when=datetime.now(UTC)
     )
     sm.assert_not_called()
+    db.commit.assert_not_awaited()
 
 
 async def test_channel_list_enabled(fake_session):
