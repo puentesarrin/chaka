@@ -24,10 +24,10 @@ See [PROTOCOL.md](PROTOCOL.md) for the full wire protocol (frames, permissions, 
         │
         ▼
    ┌─────────────────────────────────────────────┐
-   │  Chaka (FastAPI, single process)             │
-   │   • /ws  WebSocket endpoint                   │
-   │   • ConnectionManager (in-memory, asyncio)   │
-   │   • admin UI + REST API (Jinja2 templates)   │
+   │  Chaka (FastAPI, single process)            │
+   │   • /ws  WebSocket endpoint                 │
+   │   • ConnectionManager (in-memory, asyncio)  │
+   │   • admin UI + REST API (Jinja2 templates)  │
    └─────────────────────────────────────────────┘
         │ persist                  │ broadcast
         ▼                          ▼
@@ -57,23 +57,23 @@ See [PROTOCOL.md](PROTOCOL.md) for the full wire protocol (frames, permissions, 
 
 All configuration is via environment variables (a `.env` file is loaded automatically). Copy `.env.example` to `.env` and edit:
 
-| Variable | Required | Default | Purpose |
+| Variable | Required | Purpose | Default |
 |---|---|---|---|
-| `DATABASE_URL` | yes | `mysql+aiomysql://user:pass@localhost:3306/chaka` | SQLAlchemy async DB URL |
-| `ADMIN_USER` | yes | `admin` | Admin UI Basic-auth user |
-| `ADMIN_PASSWORD` | yes | `changeme` | Admin UI Basic-auth password — **change this** |
-| `LOG_FILE` | no | `./chaka.log` | Rotating application log path |
-| `LOG_MAX_BYTES` | no | `5242880` | Log rotation size (5 MB) |
-| `LOG_BACKUP_COUNT` | no | `5` | Rotated log files kept |
-| `HEARTBEAT_URL` | no | _(disabled)_ | Push-heartbeat URL (status-page/uptime monitor); blank disables it |
-| `HEARTBEAT_INTERVAL` | no | `60` | Heartbeat interval (seconds) |
-| `HEARTBEAT_LOG_FILE` | no | `./heartbeat.log` | Heartbeat log path |
-| `SENTRY_DSN` | no | _(disabled)_ | Sentry DSN; blank disables Sentry |
-| `SENTRY_TRACES_SAMPLE_RATE` | no | `0.2` | Sentry traces sample rate |
-| `TITLE` | no | `Chaka` | App title (admin UI / OpenAPI) |
-| `WEBSOCKET_PATH` | no | `/ws` | WebSocket route path |
-| `STATIC_DIR` | no | _(bundled)_ | Override the static-assets directory |
-| `TEMPLATES_DIR` | no | _(bundled)_ | Override the admin-templates directory |
+| `DATABASE_URL` | yes | SQLAlchemy async DB URL | `mysql+aiomysql://user:pass@localhost:3306/chaka` |
+| `ADMIN_USER` | yes | Admin UI Basic-auth user | `admin` |
+| `ADMIN_PASSWORD` | yes | Admin UI Basic-auth password — **change this** | `changeme` |
+| `LOG_FILE` | no | Rotating application log path | `./chaka.log` |
+| `LOG_MAX_BYTES` | no | Log rotation size (5 MB) | `5242880` |
+| `LOG_BACKUP_COUNT` | no | Rotated log files kept | `5` |
+| `HEARTBEAT_URL` | no | Push-heartbeat URL (status-page/uptime monitor); blank disables it | _(disabled)_ |
+| `HEARTBEAT_INTERVAL` | no | Heartbeat interval (seconds) | `60` |
+| `HEARTBEAT_LOG_FILE` | no | Heartbeat log path | `./heartbeat.log` |
+| `SENTRY_DSN` | no | Sentry DSN; blank disables Sentry | _(disabled)_ |
+| `SENTRY_TRACES_SAMPLE_RATE` | no | Sentry traces sample rate | `0.2` |
+| `TITLE` | no | App title (admin UI / OpenAPI) | `Chaka` |
+| `WEBSOCKET_PATH` | no | WebSocket route path | `/ws` |
+| `STATIC_DIR` | no | Override the static-assets directory | _(bundled)_ |
+| `TEMPLATES_DIR` | no | Override the admin-templates directory | _(bundled)_ |
 
 ## Install & run (from PyPI)
 
