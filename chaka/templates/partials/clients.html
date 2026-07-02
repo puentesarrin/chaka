@@ -1,0 +1,22 @@
+<div class="panel-header">
+  <h2>Connected Clients</h2>
+  <span id="client-count" class="muted"></span>
+  <button onclick="openConnectionLogModal()" class="secondary" style="margin-left:auto">Connection Log</button>
+  <button onclick="openSendModal()">Send message</button>
+</div>
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr>
+      <th>Token Name</th>
+      <th>Client</th>
+      <th>IP</th>
+      <th>Connected At</th>
+      <th>Duration</th>
+    </tr>
+  </thead>
+  <tbody id="clients-tbody">
+    <tr><td colspan="5" class="empty">No clients connected</td></tr>
+  </tbody>
+</table>
+</div>

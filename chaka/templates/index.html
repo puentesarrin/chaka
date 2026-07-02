@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+{% block content %}
+<header>
+  <a href="/"><img src="/static/logo-combo.svg" alt="Chaka" class="header-logo"></a>
+  <span class="header-divider"></span>
+  <h1>Chaka</h1>
+  <button id="tz-toggle" class="secondary small" style="margin-left:auto" onclick="toggleTzMode()">Local</button>
+</header>
+
+<div class="tabs-wrapper">
+<nav class="tabs">
+  <button class="tab-btn active" data-tab="tokens">Tokens</button>
+  <button class="tab-btn" data-tab="clients">Connected Clients</button>
+  <button class="tab-btn" data-tab="channels">Voice Channels</button>
+  <button class="tab-btn" data-tab="voice-log">Voice Activity</button>
+  <button class="tab-btn" data-tab="logs">Notification Log</button>
+  <button class="tab-btn" data-tab="server-log">Server Log</button>
+</nav>
+</div>
+
+<main>
+  <div id="tab-tokens" class="tab-panel active">
+    {% include "partials/tokens.html" %}
+  </div>
+  <div id="tab-clients" class="tab-panel">
+    {% include "partials/clients.html" %}
+  </div>
+  <div id="tab-channels" class="tab-panel">
+    {% include "partials/channels.html" %}
+  </div>
+  <div id="tab-voice-log" class="tab-panel">
+    {% include "partials/voice_log.html" %}
+  </div>
+  <div id="tab-logs" class="tab-panel">
+    {% include "partials/logs.html" %}
+  </div>
+  <div id="tab-server-log" class="tab-panel">
+    {% include "partials/server_log.html" %}
+  </div>
+</main>
+
+<!-- Create token modal -->
+<div id="create-modal" class="modal" style="display:none">
+  <div class="modal-overlay" onclick="closeCreateModal()"></div>
+  <div class="modal-box">
+    <h2>Create Token</h2>
+    <form id="create-form" onsubmit="submitCreateToken(event)">
+      <label>Name
+        <input type="text" id="new-token-name" placeholder="e.g. Android — office" required>
+      </label>
+      <div id="token-result" style="display:none" class="token-result">
+        <p>Token created. Copy it now — it will not be shown again.</p>
+        <code id="token-value"></code>
+        <button type="button" onclick="copyToken(this)">Copy to clipboard</button>
+      </div>
+      <div class="modal-actions">
+        <button type="submit" id="create-btn">Create</button>
+        <button type="button" onclick="closeCreateModal()" class="secondary">Close</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Rename modal -->
+<div id="rename-modal" class="modal" style="display:none">
+  <div class="modal-overlay" onclick="closeRenameModal()"></div>
+  <div class="modal-box">
+    <h2>Rename Token</h2>
+    <form id="rename-form" onsubmit="submitRename(event)">
+      <label>Name
+        <input type="text" id="rename-input" required>
+      </label>
+      <input type="hidden" id="rename-token-id">
+      <div class="modal-actions">
+        <button type="submit">Save</button>
+        <button type="button" onclick="closeRenameModal()" class="secondary">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Send message modal -->
+<div id="send-modal" class="modal" style="display:none">
+  <div class="modal-overlay" onclick="closeSendModal()"></div>
+  <div class="modal-box">
+    <h2>Send Message</h2>
+    <form id="send-form" onsubmit="submitSendMessage(event)">
+      <label>Scope
+        <input type="text" name="scope" placeholder="e.g. System" autocomplete="off">
+      </label>
+      <label>Title
+        <input type="text" name="title" placeholder="Notification title" autocomplete="off" required>
+      </label>
+      <label>Body
+        <input type="text" name="body" placeholder="Notification body" autocomplete="off">
+      </label>
+      <label>Package <span style="font-weight:400;text-transform:none;font-size:11px;color:var(--muted)">(optional)</span>
+        <input type="text" name="package" placeholder="com.example.app" autocomplete="off">
+      </label>
+      <label>Recipients
+        <div id="send-recipients" style="margin-top:6px;display:flex;flex-direction:column;gap:4px;max-height:160px;overflow-y:auto;padding:8px;background:var(--surface2);border-radius:6px">
+          <span class="muted" style="font-size:12px">Loading…</span>
+        </div>
+      </label>
+      <div class="modal-actions">
+        <button type="submit" id="send-btn">Send</button>
+        <button type="button" onclick="closeSendModal()" class="secondary">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Regenerate result modal -->
+<div id="regen-modal" class="modal" style="display:none">
+  <div class="modal-overlay"></div>
+  <div class="modal-box">
+    <h2>Token Regenerated</h2>
+    <div class="token-result">
+      <p>New token value. Copy it now — it will not be shown again.</p>
+      <code id="regen-token-value"></code>
+      <button type="button" onclick="copyRegenToken(this)">Copy to clipboard</button>
+    </div>
+    <div class="modal-actions">
+      <button type="button" onclick="closeRegenModal()">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- Token events modal -->
+<div id="events-modal" class="modal" style="display:none">
+  <div class="modal-overlay" onclick="closeEventsModal()"></div>
+  <div class="modal-box" style="max-width:620px">
+    <h2 id="events-modal-title">History</h2>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <span id="events-info" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Event</th>
+            <th>When</th>
+            <th>Detail</th>
+          </tr>
+        </thead>
+        <tbody id="events-tbody">
+          <tr><td colspan="3" class="empty">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="events-pagination" class="pagination" style="margin-top:12px"></div>
+    <div class="modal-actions" style="margin-top:16px">
+      <button type="button" onclick="closeEventsModal()" class="secondary">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Token deliveries modal -->
+<div id="deliveries-modal" class="modal" style="display:none">
+  <div class="modal-overlay" onclick="closeDeliveriesModal()"></div>
+  <div class="modal-box" style="max-width:660px">
+    <h2 id="deliveries-modal-title">Messages</h2>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <span id="deliveries-info" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Received</th>
+            <th>Source</th>
+            <th>Scope</th>
+            <th>Title</th>
+            <th>Sent</th>
+            <th>Acked</th>
+          </tr>
+        </thead>
+        <tbody id="deliveries-tbody">
+          <tr><td colspan="6" class="empty">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="deliveries-pagination" class="pagination" style="margin-top:12px"></div>
+    <div class="modal-actions" style="margin-top:16px">
+      <button type="button" onclick="closeDeliveriesModal()" class="secondary">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Notification detail modal -->
+<div id="log-detail-modal" class="modal" style="display:none">
+  <div class="modal-overlay" onclick="closeLogDetailModal()"></div>
+  <div class="modal-box" style="max-width:560px">
+    <h2>Notification Detail</h2>
+    <div id="log-detail-meta" style="font-size:12px;color:var(--muted);margin-bottom:16px"></div>
+    <div id="log-detail-payload" style="margin-bottom:20px"></div>
+    <h3 style="font-size:13px;font-weight:600;margin-bottom:10px">Delivered To</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Token</th>
+            <th>Sent</th>
+            <th>Acked</th>
+          </tr>
+        </thead>
+        <tbody id="log-detail-deliveries">
+          <tr><td colspan="3" class="empty">No deliveries recorded</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="modal-actions" style="margin-top:16px">
+      <button type="button" onclick="closeLogDetailModal()" class="secondary">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Connection log modal -->
+<div id="connection-log-modal" class="modal" style="display:none">
+  <div class="modal-overlay" onclick="closeConnectionLogModal()"></div>
+  <div class="modal-box" style="max-width:660px">
+    <h2>Connection Log</h2>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <span id="connection-log-info" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Token</th>
+            <th>Event</th>
+            <th>When</th>
+            <th>IP</th>
+          </tr>
+        </thead>
+        <tbody id="connection-log-tbody">
+          <tr><td colspan="4" class="empty">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="connection-log-pagination" class="pagination" style="margin-top:12px"></div>
+    <div class="modal-actions" style="margin-top:16px">
+      <button type="button" onclick="closeConnectionLogModal()" class="secondary">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create channel modal -->
+<div id="create-channel-modal" class="modal" style="display:none">
+  <div class="modal-overlay" onclick="closeCreateChannelModal()"></div>
+  <div class="modal-box">
+    <h2>Create Voice Channel</h2>
+    <form id="create-channel-form" onsubmit="submitCreateChannel(event)">
+      <label>Number
+        <input type="text" id="new-channel-number" placeholder="e.g. 1" required>
+      </label>
+      <label>Name
+        <input type="text" id="new-channel-name" placeholder="e.g. Ops" required>
+      </label>
+      <div class="modal-actions">
+        <button type="submit" id="create-channel-btn">Create</button>
+        <button type="button" onclick="closeCreateChannelModal()" class="secondary">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Rename channel modal -->
+<div id="rename-channel-modal" class="modal" style="display:none">
+  <div class="modal-overlay" onclick="closeRenameChannelModal()"></div>
+  <div class="modal-box">
+    <h2>Rename Channel</h2>
+    <form id="rename-channel-form" onsubmit="submitRenameChannel(event)">
+      <label>Name
+        <input type="text" id="rename-channel-name" required>
+      </label>
+      <input type="hidden" id="rename-channel-id">
+      <div class="modal-actions">
+        <button type="submit">Save</button>
+        <button type="button" onclick="closeRenameChannelModal()" class="secondary">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Confirm modal -->
+<div id="confirm-modal" class="modal" style="display:none">
+  <div class="modal-overlay"></div>
+  <div class="modal-box" style="max-width:360px">
+    <h2>Confirm</h2>
+    <p id="confirm-message" style="color:var(--muted);font-size:13px;margin-bottom:20px"></p>
+    <div class="modal-actions">
+      <button id="confirm-ok" class="danger">Confirm</button>
+      <button id="confirm-cancel" class="secondary">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+{% endblock %}

@@ -1,0 +1,30 @@
+<div class="panel-header">
+  <h2>Notification Log</h2>
+  <div class="log-filters">
+    <select id="log-filter-token" onchange="loadLogs(1)">
+      <option value="">All tokens</option>
+      {% for t in tokens %}
+      <option value="{{ t.id }}">{{ t.name | e }}</option>
+      {% endfor %}
+    </select>
+  </div>
+</div>
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr>
+      <th>Timestamp</th>
+      <th>Source</th>
+      <th>Token</th>
+      <th>Scope</th>
+      <th>Title</th>
+      <th>Body</th>
+    </tr>
+  </thead>
+  <tbody id="logs-tbody">
+    <tr><td colspan="6" class="empty">Loading…</td></tr>
+  </tbody>
+</table>
+</div>
+<div id="logs-pagination" class="pagination"></div>
+<div id="logs-info" class="muted" style="margin-top:8px"></div>

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 64" width="260" height="64">
+  <!-- Neutral placeholder wordmark — replace with your own brand -->
+  <g fill="none" stroke="#6366f1" stroke-width="4" stroke-linecap="round">
+    <path d="M8 40 Q26 18 44 40"/>
+    <line x1="16" y1="33" x2="16" y2="46"/>
+    <line x1="26" y1="25" x2="26" y2="46"/>
+    <line x1="36" y1="33" x2="36" y2="46"/>
+    <line x1="8" y1="46" x2="44" y2="46"/>
+  </g>
+  <text x="60" y="42" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="34" font-weight="600" fill="#e2e2e8">Chaka</text>
+</svg>

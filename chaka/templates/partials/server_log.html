@@ -1,0 +1,10 @@
+<div class="panel-header">
+  <h2>Server Log</h2>
+  <div style="display:flex;gap:6px">
+    <button id="server-log-tab-server" class="small active" onclick="switchServerLogTab('server')">Chaka</button>
+    <button id="server-log-tab-heartbeat" class="small secondary" onclick="switchServerLogTab('heartbeat')">Heartbeat</button>
+  </div>
+  <span class="muted">Last 200 lines · auto-refreshes every 5s</span>
+</div>
+<pre id="server-log-content" class="log-pre">Loading…</pre>
+<pre id="heartbeat-log-content" class="log-pre" style="display:none">Loading…</pre>

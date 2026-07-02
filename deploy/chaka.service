@@ -1,0 +1,19 @@
+[Unit]
+Description=Chaka WebSocket Relay Server
+After=network.target mysql.service
+Wants=mysql.service
+
+[Service]
+Type=simple
+User=chaka
+Group=chaka
+WorkingDirectory=/opt/chaka
+EnvironmentFile=/opt/chaka/.env
+ExecStart=/opt/chaka/venv/bin/chaka serve --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

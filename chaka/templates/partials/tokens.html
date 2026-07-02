@@ -1,0 +1,60 @@
+<div class="panel-header">
+  <h2>Tokens</h2>
+  <button onclick="openCreateModal()">+ Create Token</button>
+</div>
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Token</th>
+      <th>Permissions</th>
+      <th>Created</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for t in tokens %}
+    <tr>
+      <td>
+        <span class="status-dot {{ 'status-active' if t.is_active else 'status-revoked' }}" title="{{ 'Active' if t.is_active else 'Revoked' }}"></span>
+        {{ t.name | e }}
+        {% if t.is_active %}
+        <button class="icon-btn" onclick="openRenameModal({{ t.id }}, '{{ t.name | e }}')" title="Rename">✏</button>
+        {% endif %}
+      </td>
+      <td>
+        <span class="masked" data-token="{{ t.token | e }}">••••••••••••••••</span>
+        <button class="icon-btn" onclick="toggleToken(this)" title="Reveal">👁</button>
+        <button class="icon-btn" onclick="copyTokenValue(this)" title="Copy">⎘</button>
+        {% if t.is_active %}
+        <button class="icon-btn" onclick="regenerateToken({{ t.id }})" title="Regenerate">↺</button>
+        {% endif %}
+      </td>
+      <td class="td-flex" style="display:flex;gap:6px">
+        <button class="small perm-btn {{ 'perm-on' if t.can_send else 'perm-off' }}"
+                onclick="togglePermission({{ t.id }}, 'can_send', {{ 'false' if t.can_send else 'true' }}, this)">Send</button>
+        <button class="small perm-btn {{ 'perm-on' if t.can_receive else 'perm-off' }}"
+                onclick="togglePermission({{ t.id }}, 'can_receive', {{ 'false' if t.can_receive else 'true' }}, this)">Receive</button>
+        <button class="small perm-btn {{ 'perm-on' if t.can_talk else 'perm-off' }}"
+                onclick="togglePermission({{ t.id }}, 'can_talk', {{ 'false' if t.can_talk else 'true' }}, this)">Talk</button>
+        <button class="small perm-btn {{ 'perm-on' if t.can_hear else 'perm-off' }}"
+                onclick="togglePermission({{ t.id }}, 'can_hear', {{ 'false' if t.can_hear else 'true' }}, this)">Hear</button>
+      </td>
+      <td><span class="ts" data-ts="{{ t.created_at.strftime('%Y-%m-%dT%H:%M:%S') }}"></span></td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap">
+        {% if t.is_active %}
+        <button class="small danger" onclick="revokeToken({{ t.id }})">Revoke</button>
+        {% else %}
+        <button class="small secondary" onclick="restoreToken({{ t.id }})">Restore</button>
+        {% endif %}
+        <button class="small secondary" onclick="openDeliveriesModal({{ t.id }}, '{{ t.name | e }}')">Messages</button>
+        <button class="small secondary" onclick="openEventsModal({{ t.id }}, '{{ t.name | e }}')">History</button>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="empty">No tokens yet — create one to get started.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>

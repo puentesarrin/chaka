@@ -1,0 +1,108 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "chaka"
+dynamic = ["version"]
+description = "A self-hosted real-time relay server for notifications and voice over WebSocket."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [{ name = "Jorge Puente-Sarrín", email = "puentesarrin@gmail.com" }]
+keywords = ["websocket", "relay", "notifications", "voice", "fastapi", "realtime"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: FastAPI",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Communications :: Chat",
+    "Topic :: Internet :: WWW/HTTP",
+]
+dependencies = [
+    "fastapi>=0.115,<0.117",
+    "uvicorn[standard]>=0.30,<0.36",
+    "websockets>=13,<15",
+    "sqlalchemy[asyncio]>=2.0,<3",
+    "aiomysql>=0.2,<0.3",
+    "cryptography>=42",          # required by MySQL 8 caching_sha2_password auth
+    "alembic>=1.13,<2",
+    "jinja2>=3.1,<4",
+    "python-dotenv>=1,<2",
+    "pydantic>=2.7,<3",
+    "httpx>=0.27,<0.29",
+    "sentry-sdk[fastapi]>=2,<3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.6",
+    "pytest>=8",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=5",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["chaka"]
+omit = ["chaka/alembic/*", "chaka/__main__.py"]
+
+[project.urls]
+Homepage = "https://github.com/puentesarrin/chaka"
+Repository = "https://github.com/puentesarrin/chaka"
+Issues = "https://github.com/puentesarrin/chaka/issues"
+
+[project.scripts]
+chaka = "chaka.cli:main"
+
+[tool.hatch.version]
+path = "chaka/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["chaka"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/chaka",
+    "/main.py",
+    "/alembic.ini",
+    "/README.md",
+    "/PROTOCOL.md",
+    "/LICENSE",
+    "/.env.example",
+    "/deploy",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+extend-exclude = ["chaka/alembic"]  # keep ruff's default excludes (.venv, etc.) and skip migrations
+
+lint.select = [
+    "I",  # isort
+    "C4",  # flake8-comprehensions
+    "F",  # pyflakes
+    "E",  # pycodestyle
+    "TID",  # flake8-tidy-imports
+    "RUF",  # ruff-internal
+]
+lint.ignore = [
+    "E501",  # line too long
+    "C401",  # generator syntax for sets vs always force set comprehension
+    "C408",  # allow declaring no literal dict
+    "C417",  # allow to use map for list comprehensions
+    "PLC0414",  # allow explicit re-exports using 'as' without forcing __all__
+    "C901",  # mccabe
+    "I001",
+    "RUF012",
+    "RUF006",
+    "RUF100",
+]
+format.quote-style = "single"
