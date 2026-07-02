@@ -66,7 +66,7 @@ class ChakaApplicationFactory:
         app.state.manager = manager
         app.state.engine = engine
         app.state.sessionmaker = sessionmaker
-        app.state.templates = Jinja2Templates(directory=settings.templates_dir)
+        app.state.templates = Jinja2Templates(directory=self._template_dirs(settings))
         app.state.handler = handler
         app.state.token_repo = repositories.TokenRepository(sessionmaker)
         app.state.notification_repo = repositories.NotificationRepository(sessionmaker)
@@ -108,8 +108,22 @@ class ChakaApplicationFactory:
             else:
                 app.include_router(router)
 
+    def _template_dirs(self, settings: application.Settings) -> List[str]:
+        """The app's templates dir first, then Chaka's bundled dir as a fallback,
+        so a consumer only overrides the templates it actually customizes."""
+        dirs = [settings.templates_dir]
+        if application.DEFAULT_TEMPLATES_DIR not in dirs:
+            dirs.append(application.DEFAULT_TEMPLATES_DIR)
+        return dirs
+
     def _mount_static(self, app: FastAPI, settings: application.Settings) -> None:
-        app.mount('/static', StaticFiles(directory=settings.static_dir), name='static')
+        # Serve the app's static dir, falling back to Chaka's bundled package static
+        # (``packages``), so a consumer only overrides the assets it customizes.
+        app.mount(
+            '/static',
+            StaticFiles(directory=settings.static_dir, packages=[('chaka', 'static')]),
+            name='static',
+        )
 
     def _init_sentry(self, settings: application.Settings) -> None:
         if settings.sentry_dsn:

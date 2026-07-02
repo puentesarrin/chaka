@@ -50,3 +50,29 @@ def test_admin_route_requires_valid_basic_auth(settings):
         assert client.get('/api/clients', auth=('u', 'p')).json() == []
         assert client.get('/api/clients', auth=('u', 'wrong')).status_code == 401
         assert client.get('/api/clients').status_code == 401
+
+
+def _override_settings(tmp_path):
+    return application.Settings(
+        templates_dir=str(tmp_path),
+        static_dir=str(tmp_path),
+        log_file=str(tmp_path / 'c.log'),
+        heartbeat_log_file=str(tmp_path / 'h.log'),
+    )
+
+
+def test_templates_fall_back_to_bundled(tmp_path):
+    (tmp_path / 'custom.html').write_text('hi')
+    app = factory.create_app(_override_settings(tmp_path))
+    env = app.fastapi.state.templates.env
+    assert env.get_template('custom.html') is not None  # from the override dir
+    assert env.get_template('index.html') is not None  # falls back to Chaka's bundle
+
+
+def test_static_falls_back_to_bundled(tmp_path):
+    (tmp_path / 'brand.txt').write_text('BRAND')
+    app = factory.create_app(_override_settings(tmp_path))
+    with TestClient(app) as client:
+        assert client.get('/static/brand.txt').status_code == 200  # from the override dir
+        assert client.get('/static/app.js').status_code == 200  # falls back to Chaka's bundle
+        assert client.get('/static/nope.xyz').status_code == 404
