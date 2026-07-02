@@ -1,0 +1,50 @@
+name: Publish
+
+# Publishes to PyPI when a GitHub Release is published. The release tag should
+# match the version in chaka/__init__.py (e.g. tag v0.1.0 -> __version__ "0.1.0").
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify release tag matches package version
+        run: |
+          version=$(sed -n "s/^__version__ = ['\"]\(.*\)['\"]/\1/p" chaka/__init__.py)
+          tag="${GITHUB_REF_NAME#v}"
+          echo "package=$version tag=$tag"
+          test "$version" = "$tag" || {
+            echo "::error::release tag '$GITHUB_REF_NAME' does not match chaka __version__ '$version'"
+            exit 1
+          }
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install --upgrade build
+          python -m build
+      - name: Check metadata
+        run: |
+          python -m pip install --upgrade twine
+          python -m twine check dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write  # required for PyPI Trusted Publishing (OIDC); no API token needed
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
