@@ -7,7 +7,7 @@
 
 Chaka is a self-hosted, real-time **relay server** for notifications and voice over a single WebSocket. Sender clients publish notification payloads (or stream push-to-talk audio); receiver clients get them in real time. It is a small, dependency-light FastAPI application with a server-rendered admin UI for managing access tokens, channels, and logs.
 
-It is transport-agnostic about *what* you relay — any JSON notification payload and any binary audio stream. The reference clients are Android apps (a notification forwarder and a receiver), but any WebSocket or HTTP client that follows [the protocol](PROTOCOL.md) works.
+It is transport-agnostic about *what* you relay — any JSON notification payload and any binary audio stream. The reference clients are Android apps (a notification forwarder and a receiver), but any WebSocket or HTTP client that follows [the protocol](https://github.com/puentesarrin/chaka/blob/main/PROTOCOL.md) works.
 
 ## Features
 
@@ -18,7 +18,7 @@ It is transport-agnostic about *what* you relay — any JSON notification payloa
 - **Admin UI** (HTTP Basic) — token CRUD and permissions, live connected-client monitoring, voice channels, notification history with per-token delivery/ack tracking, and log tailing.
 - **Operational niceties** — rotating file logs, an optional push **heartbeat** to any status-page/uptime monitor (Uptime Kuma, Healthchecks.io, …), optional Sentry error reporting.
 
-See [PROTOCOL.md](PROTOCOL.md) for the full wire protocol (frames, permissions, close codes).
+See [PROTOCOL.md](https://github.com/puentesarrin/chaka/blob/main/PROTOCOL.md) for the full wire protocol (frames, permissions, close codes).
 
 ## Architecture
 
@@ -219,4 +219,4 @@ Run the server bound to `127.0.0.1` behind nginx. Use a **single worker** — th
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](https://github.com/puentesarrin/chaka/blob/main/LICENSE).
