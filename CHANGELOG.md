@@ -5,6 +5,14 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-07-02
+
+### Added
+
+- Templates and static assets now **fall back to Chaka's bundled files**. When `TEMPLATES_DIR` / `STATIC_DIR` point at a custom directory, any file not found there resolves from Chaka's packaged `templates/` / `static/`. Consumers can override only the assets they customize (e.g. branding) instead of copying the whole set. Backward-compatible: a default install serves Chaka's own assets exactly as before.
+
+[0.2.0]: https://github.com/puentesarrin/chaka/releases/tag/v0.2.0
+
 ## [0.1.0] - 2026-07-01
 
 Initial release.
