@@ -113,9 +113,9 @@ inject your own collaborators, no subclassing required:
 from chaka.factory import create_app
 from chaka.application import Settings
 
-app = create_app()                                       # env-driven
-app = create_app(Settings(title="Acme Relay"))           # explicit config
-app = create_app(manager=MyManager(), routers=[(my_router, "/api")])
+app = create_app()  # env-driven
+app = create_app(Settings(title='Acme Relay'))  # explicit config
+app = create_app(manager=MyManager(), routers=[(my_router, '/api')])
 ```
 
 `create_app` returns a `ChakaApp` (an ASGI app with `.run()`), so
@@ -126,9 +126,11 @@ app = create_app(manager=MyManager(), routers=[(my_router, "/api")])
 ```python
 from chaka.factory import ChakaApplicationFactory
 
+
 class MyFactory(ChakaApplicationFactory):
     def get_manager(self, voice_log):
         return MyManager(voice_log=voice_log)
+
 
 app = MyFactory().create_app()
 ```
