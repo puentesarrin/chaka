@@ -10,10 +10,10 @@ Create Date: 2026-01-01 00:00:01.000000
 """
 from __future__ import annotations
 
-from datetime import UTC, datetime
-
 from alembic import op
 import sqlalchemy as sa
+
+from chaka import clock
 
 revision = "0002"
 down_revision = "0001"
@@ -30,7 +30,7 @@ def upgrade() -> None:
         sa.column("created_at", sa.DateTime),
     )
     op.bulk_insert(voice_channels_table, [
-        {"number": 1, "name": "Channel 1", "is_enabled": True, "created_at": datetime.now(UTC)},
+        {"number": 1, "name": "Channel 1", "is_enabled": True, "created_at": clock.utcnow()},
     ])
 
 

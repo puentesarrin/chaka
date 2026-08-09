@@ -93,6 +93,15 @@ def test_notify_accepts_and_broadcasts(ctx):
     ctx.app.fastapi.state.notification_repo.record_deliveries.assert_awaited_once()
 
 
+def test_notify_sets_forwarded_at(ctx):
+    ctx.app.fastapi.state.token_repo.get_active.return_value = db_token(can_send=True)
+    ctx.app.fastapi.state.notification_repo.create.return_value = 1
+    ctx.manager.broadcast.return_value = []
+    ctx.client.post('/api/notify', json={'title': 'hi'}, headers=BEARER)
+    kwargs = ctx.app.fastapi.state.notification_repo.create.call_args.kwargs
+    assert isinstance(kwargs['forwarded_at'], datetime)
+
+
 # --- send (admin + repos) -----------------------------------------------------
 def test_send_broadcast(ctx):
     ctx.app.fastapi.state.notification_repo.create.return_value = 5
@@ -108,6 +117,14 @@ def test_send_to_specific_tokens(ctx):
     r = ctx.client.post('/api/send', json={'title': 'hi', 'token_ids': [1, 2]})
     assert r.status_code == 200
     ctx.manager.send_to_tokens.assert_awaited_once()
+
+
+def test_send_sets_forwarded_at(ctx):
+    ctx.app.fastapi.state.notification_repo.create.return_value = 5
+    ctx.manager.broadcast.return_value = []
+    ctx.client.post('/api/send', json={'title': 'hi'})
+    kwargs = ctx.app.fastapi.state.notification_repo.create.call_args.kwargs
+    assert isinstance(kwargs['forwarded_at'], datetime)
 
 
 # --- ack (bearer + get_db) ----------------------------------------------------

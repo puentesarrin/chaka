@@ -26,7 +26,7 @@ from typing import Any, Optional
 import httpx
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
-from chaka import frames, inbound, interfaces, repositories, types
+from chaka import clock, frames, inbound, interfaces, repositories, types
 
 # Bundled asset directories, resolved relative to this package so they work
 # whether Chaka is run from a clone or pip-installed anywhere on disk.
@@ -281,7 +281,11 @@ class WebSocketHandler(interfaces.IWebSocketHandler):
     ) -> None:
         msg_id = str(uuid.uuid4())
         ts = payload.get('timestamp')
-        received_at = datetime.fromtimestamp(ts / 1000, UTC) if isinstance(ts, (int, float)) else datetime.now(UTC)
+        received_at = (
+            datetime.fromtimestamp(ts / 1000, UTC).replace(tzinfo=None)
+            if isinstance(ts, (int, float))
+            else clock.utcnow()
+        )
         log_id = await notifications.create(
             token_id=conn.token_id,
             msg_id=msg_id,
@@ -289,7 +293,7 @@ class WebSocketHandler(interfaces.IWebSocketHandler):
             received_at=received_at,
             client_ip=conn.ip,
             payload=payload,
-            forwarded_at=datetime.now(UTC),
+            forwarded_at=clock.utcnow(),
         )
         delivered = await manager.broadcast(
             frames.single(msg_id=msg_id, received_at=received_at.isoformat(), message=payload)
@@ -298,7 +302,7 @@ class WebSocketHandler(interfaces.IWebSocketHandler):
             'Broadcast: token=%s scope=%s delivered=%d', conn.token_name, payload.get('scope', ''), len(delivered)
         )
         if delivered:
-            now = datetime.now(UTC)
+            now = clock.utcnow()
             await tokens.mark_delivered([d.token_id for d in delivered], now)
             await notifications.record_deliveries(log_id, delivered, now)
 
@@ -341,7 +345,7 @@ class WebSocketHandler(interfaces.IWebSocketHandler):
             )
         )
         self.logger.info('WS replay: ws_id=%s token=%s count=%d', ws_id, conn.token_name, len(pending))
-        now = datetime.now(UTC)
+        now = clock.utcnow()
         await notifications.record_replay(
             token_id=conn.token_id, token_name=conn.token_name, notification_ids=[p.id for p in pending], when=now
         )

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -9,7 +8,7 @@ from pydantic import BaseModel
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from chaka import database, models
+from chaka import clock, database, models
 
 router = APIRouter(tags=['ack'])
 _bearer = HTTPBearer()
@@ -59,7 +58,7 @@ async def ack_messages(
     if not body.msg_ids:
         return {'acked': 0}
 
-    now = datetime.now(UTC)
+    now = clock.utcnow()
     notification_ids_q = select(models.NotificationLog.id).where(models.NotificationLog.msg_id.in_(body.msg_ids))
     result = await db.execute(
         update(models.NotificationDelivery)

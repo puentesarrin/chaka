@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import UTC, datetime
 from typing import Any, Dict
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from chaka import frames, interfaces, repositories
+from chaka import clock, frames, interfaces, repositories
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=['notify'])
@@ -38,9 +37,10 @@ async def notify(
         token_id=db_token.id,
         msg_id=msg_id,
         source=x_source,
-        received_at=datetime.now(UTC),
+        received_at=clock.utcnow(),
         client_ip=ip,
         payload=payload,
+        forwarded_at=clock.utcnow(),
     )
 
     delivered = await manager.broadcast(frames.single(msg_id=msg_id, message=payload))
@@ -52,7 +52,7 @@ async def notify(
         len(delivered),
     )
     if delivered:
-        now = datetime.now(UTC)
+        now = clock.utcnow()
         await tokens.mark_delivered([d.token_id for d in delivered], now)
         await notifications.record_deliveries(log_id, delivered, now)
 

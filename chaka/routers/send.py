@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 
-from chaka import auth, frames, interfaces, repositories
+from chaka import auth, clock, frames, interfaces, repositories
 
 router = APIRouter(tags=['send'])
 
@@ -39,7 +39,13 @@ async def send_message(
 
     msg_id = str(uuid.uuid4())
     log_id = await notifications.create(
-        token_id=None, msg_id=msg_id, source='admin', received_at=datetime.now(UTC), client_ip='admin', payload=data
+        token_id=None,
+        msg_id=msg_id,
+        source='admin',
+        received_at=clock.utcnow(),
+        client_ip='admin',
+        payload=data,
+        forwarded_at=clock.utcnow(),
     )
 
     frame = frames.single(msg_id=msg_id, message=data)
@@ -48,6 +54,6 @@ async def send_message(
     else:
         delivered = await manager.broadcast(frame)
     if delivered:
-        await notifications.record_deliveries(log_id, delivered, datetime.now(UTC))
+        await notifications.record_deliveries(log_id, delivered, clock.utcnow())
 
     return {'sent': len(delivered), 'msg_id': msg_id}
