@@ -34,7 +34,7 @@ See [PROTOCOL.md](https://github.com/puentesarrin/chaka/blob/main/PROTOCOL.md) f
    └─────────────────────────────────────────────┘
         │ persist                  │ broadcast
         ▼                          ▼
-     MySQL                 receivers (WS can_receive) / voice peers (can_talk/can_hear)
+        MySQL / PostgreSQL         receivers (WS can_receive) / voice peers (can_talk/can_hear)
 ```
 
 - **`ConnectionManager`** (`chaka/manager.py`) holds all live WebSocket connections and per-channel voice state in memory, guarded by a single `asyncio.Lock`. One connection per token is enforced.
@@ -48,13 +48,13 @@ See [PROTOCOL.md](https://github.com/puentesarrin/chaka/blob/main/PROTOCOL.md) f
 | Language / runtime | Python 3.11+ |
 | Web framework | FastAPI + Uvicorn |
 | Realtime | `websockets` (via FastAPI WebSocket) |
-| ORM / DB driver | SQLAlchemy 2.0 (async) + `aiomysql` (**MySQL**) |
+| ORM / DB driver | SQLAlchemy 2.0 (async) + `aiomysql` (**MySQL**) or `asyncpg` (**PostgreSQL**) |
 | Migrations | Alembic |
 | Templates | Jinja2 (server-rendered admin UI) |
 | Validation | Pydantic 2 |
 | Monitoring (optional) | Push heartbeat (Uptime Kuma-compatible), Sentry |
 
-> Note: the project is written and tested against **MySQL** (`aiomysql`). SQLAlchemy's async layer could in principle target another backend (e.g. PostgreSQL via `asyncpg`) by changing `DATABASE_URL` and the driver, but that is **untested** here and migrations have only been exercised on MySQL.
+> Note: the project targets **MySQL** (`aiomysql`) and **PostgreSQL** (`asyncpg`) — switch by changing `DATABASE_URL` and installing the matching driver. Both are exercised end to end: migrations, and every HTTP/WebSocket route, against a real instance of each engine. `DateTime` columns are naive UTC throughout (`chaka.clock.utcnow()`), which `aiomysql` accepted silently but `asyncpg` enforces strictly against `TIMESTAMP WITHOUT TIME ZONE` — write through `chaka.clock` rather than `datetime.now(UTC)` directly if you're extending the schema.
 
 ## Configuration
 
@@ -62,7 +62,7 @@ All configuration is via environment variables (a `.env` file is loaded automati
 
 | Variable | Required | Purpose | Default |
 |---|---|---|---|
-| `DATABASE_URL` | yes | SQLAlchemy async DB URL | `mysql+aiomysql://user:pass@localhost:3306/chaka` |
+| `DATABASE_URL` | yes | SQLAlchemy async DB URL | `mysql+aiomysql://user:pass@localhost:3306/chaka` or `postgresql+asyncpg://user:pass@localhost:5432/chaka` |
 | `ADMIN_USER` | yes | Admin UI Basic-auth user | `admin` |
 | `ADMIN_PASSWORD` | yes | Admin UI Basic-auth password — **change this** | `changeme` |
 | `LOG_FILE` | no | Rotating application log path | `./chaka.log` |
@@ -81,7 +81,8 @@ All configuration is via environment variables (a `.env` file is loaded automati
 ## Install & run (from PyPI)
 
 ```bash
-pip install chaka
+pip install chaka          # MySQL (aiomysql) — bundled by default
+pip install "chaka[postgres]"   # or PostgreSQL (asyncpg)
 
 chaka init                 # copy static/templates here, write .env, run migrations
 # edit .env — set DATABASE_URL and admin credentials

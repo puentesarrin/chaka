@@ -6,12 +6,12 @@ routers don't embed SQLAlchemy. Each method opens its own short-lived session.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import List, Optional, Sequence
 
 from sqlalchemy import select, update
 
-from chaka import interfaces, models
+from chaka import clock, interfaces, models
 from chaka.database import SessionMaker
 from chaka.types import Delivery
 
@@ -26,7 +26,7 @@ class VoiceLogRepository(interfaces.IVoiceLog):
                 token_id=token_id,
                 token_name=token_name,
                 channel_id=channel_id,
-                started_at=datetime.now(UTC),
+                started_at=clock.utcnow(),
                 listeners=0,
             )
             db.add(entry)
@@ -47,7 +47,7 @@ class VoiceLogRepository(interfaces.IVoiceLog):
             await db.execute(
                 update(models.VoiceLog)
                 .where(models.VoiceLog.id == log_id)
-                .values(ended_at=datetime.now(UTC), bytes_relayed=bytes_relayed)
+                .values(ended_at=clock.utcnow(), bytes_relayed=bytes_relayed)
             )
             await db.commit()
 
@@ -70,7 +70,7 @@ class TokenRepository:
                     token_id=token_id,
                     token_name=token_name,
                     event=event,
-                    occurred_at=datetime.now(UTC),
+                    occurred_at=clock.utcnow(),
                     detail=detail,
                 )
             )

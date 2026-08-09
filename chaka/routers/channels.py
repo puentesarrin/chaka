@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import logging
 from dataclasses import asdict
-from datetime import UTC, datetime
 from typing import Dict, List
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from chaka import auth, database, frames, interfaces, models, schemas, types
+from chaka import auth, clock, database, frames, interfaces, models, schemas, types
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=['channels'])
@@ -69,7 +68,7 @@ async def create_channel(
     ).scalar_one_or_none()
     if existing is not None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='Channel number already exists')
-    channel = models.VoiceChannel(number=body.number, name=body.name, is_enabled=True, created_at=datetime.now(UTC))
+    channel = models.VoiceChannel(number=body.number, name=body.name, is_enabled=True, created_at=clock.utcnow())
     db.add(channel)
     await db.commit()
     logger.info('Channel created: number=%d name=%s', channel.number, channel.name)

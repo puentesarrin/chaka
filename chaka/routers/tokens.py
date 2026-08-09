@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import math
 import secrets
-from datetime import UTC, datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from chaka import auth, database, models, schemas
+from chaka import auth, clock, database, models, schemas
 
 router = APIRouter(tags=['tokens'])
 
@@ -19,7 +18,7 @@ def _event(token: models.Token, event: str, detail: Optional[dict] = None) -> mo
         token_id=token.id,
         token_name=token.name,
         event=event,
-        occurred_at=datetime.now(UTC),
+        occurred_at=clock.utcnow(),
         detail=detail,
     )
 
@@ -31,7 +30,7 @@ async def create_token(
     _: str = Depends(auth.require_admin),
 ):
     token_value = secrets.token_urlsafe(32)
-    token = models.Token(name=body.name, token=token_value, created_at=datetime.now(UTC))
+    token = models.Token(name=body.name, token=token_value, created_at=clock.utcnow())
     db.add(token)
     await db.flush()
     db.add(_event(token, 'created'))
@@ -73,7 +72,7 @@ async def revoke_token(
     if not token.is_active:
         raise HTTPException(status_code=409, detail='Token is already revoked')
     token.is_active = False
-    token.revoked_at = datetime.now(UTC)
+    token.revoked_at = clock.utcnow()
     db.add(_event(token, 'revoked'))
     await db.commit()
     await request.app.state.manager.disconnect_by_token_id(token.id)
