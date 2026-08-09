@@ -7,6 +7,7 @@ stored offset), but PostgreSQL's ``asyncpg`` driver rejects one outright
 against a ``TIMESTAMP WITHOUT TIME ZONE`` column. Call this instead of
 ``datetime.now(UTC)`` anywhere the result is written to the database.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
