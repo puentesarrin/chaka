@@ -12,7 +12,7 @@ license = { file = "LICENSE" }
 authors = [{ name = "Jorge Puente-Sarrín", email = "puentesarrin@gmail.com" }]
 keywords = ["websocket", "relay", "notifications", "voice", "fastapi", "realtime"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Framework :: FastAPI",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",

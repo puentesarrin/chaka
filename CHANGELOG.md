@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-08-09
+
+### Added
+
+- **PostgreSQL support**, alongside MySQL. Install with `chaka[postgres]` (`asyncpg`) and point `DATABASE_URL` at `postgresql+asyncpg://...` — no other changes needed. `aiomysql` stays a base dependency, so existing MySQL-only installs are unaffected.
+
+### Fixed
+
+- Every `DateTime` write used a timezone-aware `datetime.now(UTC)` against columns declared without `timezone=True`. `aiomysql` accepted this silently; `asyncpg` rejects it outright against `TIMESTAMP WITHOUT TIME ZONE`. Centralized as `chaka.clock.utcnow()` (naive UTC) and used at every write site.
+- `NotificationRepository.create()` defaulted `forwarded_at` to `None` against a `NOT NULL` column with no server-side default. `POST /api/notify` and `POST /api/send` never passed it, so every HTTP-triggered notification hit this — masked on MySQL depending on `sql_mode`, surfaced immediately on PostgreSQL.
+
+[0.3.0]: https://github.com/puentesarrin/chaka/releases/tag/v0.3.0
+
 ## [0.2.0] - 2026-07-02
 
 ### Added
