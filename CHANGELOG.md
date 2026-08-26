@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.4.0] - 2026-08-26
 
 ### Added
 
@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Session login** for the admin UI: `GET`/`POST /login`, `POST /logout`, and a signed, HttpOnly, `SameSite=Lax` session cookie (`SECRET_KEY`, `SESSION_COOKIE`, `SESSION_MAX_AGE`, `SESSION_COOKIE_SECURE`). Deactivating or deleting a user invalidates their session on the next request.
 - **Users tab** in the admin UI — create, edit, activate/deactivate, change password, delete — and `/api/users` behind the same session auth.
 - **`chaka user create | list | passwd`** for managing accounts from the command line; `chaka init` now writes a random `SECRET_KEY` into the generated `.env`.
+- **`chaka db downgrade --revision REV`**, the counterpart to `chaka db upgrade`.
 
 ### Changed
 
@@ -28,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Migrations
 
 - `0003_users` — creates the `users` table. Nothing is seeded.
+
+[0.4.0]: https://github.com/puentesarrin/chaka/releases/tag/v0.4.0
 
 ## [0.3.0] - 2026-08-09
 
