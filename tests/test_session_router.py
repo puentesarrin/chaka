@@ -7,7 +7,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 from chaka import application, factory, interfaces, models, passwords
-from chaka.routers import session
 
 
 @pytest.fixture
@@ -33,17 +32,6 @@ def client(tmp_path):
     repo.count.return_value = 1
     app.fastapi.state.user_repo = repo
     return SimpleNamespace(http=TestClient(app, follow_redirects=False), user=user, repo=repo)
-
-
-# --- _safe_next ---------------------------------------------------------------
-@pytest.mark.parametrize('value', ['/', '/tokens', '/a?b=c'])
-def test_same_site_paths_are_kept(value):
-    assert session._safe_next(value) == value
-
-
-@pytest.mark.parametrize('value', ['https://evil.example', '//evil.example', 'evil.example', ''])
-def test_off_site_targets_fall_back_to_root(value):
-    assert session._safe_next(value) == '/'
 
 
 # --- routes -------------------------------------------------------------------
@@ -73,14 +61,23 @@ def test_successful_login_sets_a_hardened_cookie(client):
     assert 'SameSite=lax' in cookie
 
 
-def test_login_honours_a_same_site_next(client):
-    r = client.http.post('/login', data={'username': 'jorge', 'password': 'hunter2!!', 'next': '/tokens'})
-    assert r.headers['location'] == '/tokens'
+@pytest.mark.parametrize('target', ['/', '/tokens', '/a?b=c'])
+def test_login_honours_a_same_site_next(client, target):
+    r = client.http.post('/login', data={'username': 'jorge', 'password': 'hunter2!!', 'next': target})
+    assert r.headers['location'] == target
 
 
-def test_login_ignores_an_off_site_next(client):
-    r = client.http.post('/login', data={'username': 'jorge', 'password': 'hunter2!!', 'next': 'https://evil.example'})
+@pytest.mark.parametrize('target', ['https://evil.example', '//evil.example', 'evil.example', ''])
+def test_login_ignores_an_off_site_next(client, target):
+    r = client.http.post('/login', data={'username': 'jorge', 'password': 'hunter2!!', 'next': target})
     assert r.headers['location'] == '/'
+
+
+@pytest.mark.parametrize('target', ['https://evil.example', '//evil.example'])
+def test_login_page_ignores_an_off_site_next(client, target):
+    client.http.post('/login', data={'username': 'jorge', 'password': 'hunter2!!'})
+    r = client.http.get('/login', params={'next': target})
+    assert r.status_code == 303 and r.headers['location'] == '/'
 
 
 def test_login_page_redirects_when_already_signed_in(client):

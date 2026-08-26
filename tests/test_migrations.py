@@ -24,17 +24,14 @@ SQLITE_ONLY = pytest.mark.skipif(
 
 def _reset(url: str) -> None:
     """Drop whatever a previous test left behind, then migrate to head."""
-    from alembic import command
+    from chaka.cli import db_downgrade, db_upgrade
 
-    from chaka.cli import _alembic_config
-
-    cfg = _alembic_config()
     with patch.dict(os.environ, {'DATABASE_URL': url}):
         try:
-            command.downgrade(cfg, 'base')
+            db_downgrade('base')
         except Exception:
             pass  # nothing applied yet
-        command.upgrade(cfg, 'head')
+        db_upgrade('head')
 
 
 @pytest.fixture
