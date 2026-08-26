@@ -41,7 +41,7 @@ class Settings:
     static_dir: str = DEFAULT_STATIC_DIR
     templates_dir: str = DEFAULT_TEMPLATES_DIR
     websocket_path: str = '/ws'
-    database_url: str = 'mysql+aiomysql://user:pass@localhost:3306/chaka'
+    database_url: str = 'sqlite+aiosqlite:///./chaka.db'
     admin_user: str = 'admin'
     admin_password: str = 'changeme'
     secret_key: str = ''

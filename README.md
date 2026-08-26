@@ -34,7 +34,7 @@ See [PROTOCOL.md](https://github.com/puentesarrin/chaka/blob/main/PROTOCOL.md) f
    └─────────────────────────────────────────────┘
         │ persist                  │ broadcast
         ▼                          ▼
-        MySQL / PostgreSQL         receivers (WS can_receive) / voice peers (can_talk/can_hear)
+        SQLite / MySQL / PostgreSQL   receivers (WS can_receive) / voice peers (can_talk/can_hear)
 ```
 
 - **`ConnectionManager`** (`chaka/manager.py`) holds all live WebSocket connections and per-channel voice state in memory, guarded by a single `asyncio.Lock`. One connection per token is enforced.
@@ -48,13 +48,15 @@ See [PROTOCOL.md](https://github.com/puentesarrin/chaka/blob/main/PROTOCOL.md) f
 | Language / runtime | Python 3.11+ |
 | Web framework | FastAPI + Uvicorn |
 | Realtime | `websockets` (via FastAPI WebSocket) |
-| ORM / DB driver | SQLAlchemy 2.0 (async) + `aiomysql` (**MySQL**) or `asyncpg` (**PostgreSQL**) |
+| ORM / DB driver | SQLAlchemy 2.0 (async) + `aiosqlite` (**SQLite**, default), `aiomysql` (**MySQL**) or `asyncpg` (**PostgreSQL**) |
 | Migrations | Alembic |
 | Templates | Jinja2 (server-rendered admin UI) |
 | Validation | Pydantic 2 |
 | Monitoring (optional) | Push heartbeat (Uptime Kuma-compatible), Sentry |
 
-> Note: the project targets **MySQL** (`aiomysql`) and **PostgreSQL** (`asyncpg`) — switch by changing `DATABASE_URL` and installing the matching driver. Both are exercised end to end: migrations, and every HTTP/WebSocket route, against a real instance of each engine. `DateTime` columns are naive UTC throughout (`chaka.clock.utcnow()`), which `aiomysql` accepted silently but `asyncpg` enforces strictly against `TIMESTAMP WITHOUT TIME ZONE` — write through `chaka.clock` rather than `datetime.now(UTC)` directly if you're extending the schema.
+> Note: **SQLite** (`aiosqlite`) is the default and needs no server — good for a single-node relay, which is the only topology Chaka supports anyway. **MySQL** (`aiomysql`) and **PostgreSQL** (`asyncpg`) are supported via extras; switch by changing `DATABASE_URL` and installing the matching driver. All three are exercised end to end: migrations, and every HTTP/WebSocket route.
+>
+> Two schema details to keep in mind if you extend it. `DateTime` columns are naive UTC throughout (`chaka.clock.utcnow()`), which `aiomysql` accepted silently but `asyncpg` enforces strictly against `TIMESTAMP WITHOUT TIME ZONE` — write through `chaka.clock` rather than `datetime.now(UTC)`. And autoincrementing `BigInteger` primary keys use `models.BigId`, because SQLite only auto-assigns a key declared exactly `INTEGER`.
 
 ## Configuration
 
@@ -62,7 +64,7 @@ All configuration is via environment variables (a `.env` file is loaded automati
 
 | Variable | Required | Purpose | Default |
 |---|---|---|---|
-| `DATABASE_URL` | yes | SQLAlchemy async DB URL | `mysql+aiomysql://user:pass@localhost:3306/chaka` or `postgresql+asyncpg://user:pass@localhost:5432/chaka` |
+| `DATABASE_URL` | no | SQLAlchemy async DB URL | `sqlite+aiosqlite:///./chaka.db` |
 | `SECRET_KEY` | recommended | Signs admin session cookies; generated per start if unset (see below) | _(ephemeral)_ |
 | `ADMIN_USER` | yes | Bootstrap admin username (used only until the first user exists) | `admin` |
 | `ADMIN_PASSWORD` | yes | Bootstrap admin password — **change this** | `changeme` |
@@ -85,7 +87,8 @@ All configuration is via environment variables (a `.env` file is loaded automati
 ## Install & run (from PyPI)
 
 ```bash
-pip install chaka          # MySQL (aiomysql) — bundled by default
+pip install chaka               # SQLite (aiosqlite) — bundled by default
+pip install "chaka[mysql]"      # or MySQL (aiomysql)
 pip install "chaka[postgres]"   # or PostgreSQL (asyncpg)
 
 chaka init                 # copy static/templates here, write .env, run migrations

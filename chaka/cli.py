@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import getpass
 import secrets
 import shutil
@@ -27,7 +28,7 @@ PACKAGE_DIR = Path(__file__).resolve().parent
 
 ENV_TEMPLATE = """\
 # Chaka configuration. See README / .env.example for the full list of options.
-DATABASE_URL=mysql+aiomysql://user:pass@localhost:3306/chaka
+DATABASE_URL=sqlite+aiosqlite:///./chaka.db
 
 # Signs admin session cookies. Keep it secret; changing it signs everyone out.
 SECRET_KEY={secret_key}
@@ -80,7 +81,10 @@ def init(path: str) -> None:
         print(f'Wrote {env_path} — edit DATABASE_URL and admin credentials before serving')
 
     print('Applying migrations...')
-    db_upgrade('head')
+    # From the target dir, so a relative sqlite path in .env resolves to the
+    # same file `chaka serve` will open there.
+    with contextlib.chdir(target):
+        db_upgrade('head')
     print('Done. Start the server with:  chaka serve')
 
 

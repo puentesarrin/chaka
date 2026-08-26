@@ -14,7 +14,7 @@ from chaka.models import Base
 config = context.config
 target_metadata = Base.metadata
 
-DATABASE_URL = os.getenv("DATABASE_URL", "mysql+aiomysql://user:pass@localhost:3306/chaka")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./chaka.db")
 
 
 def run_migrations_offline() -> None:

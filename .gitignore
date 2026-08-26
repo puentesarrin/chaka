@@ -20,6 +20,9 @@ env/
 # Secrets & runtime
 .env
 *.log
+*.db
+*.db-wal
+*.db-shm
 
 # Editors / OS
 .idea/

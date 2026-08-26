@@ -5,6 +5,10 @@ from sqlalchemy import JSON, BigInteger, Boolean, DateTime, ForeignKey, Integer,
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
+# SQLite only auto-assigns a PK declared exactly INTEGER; BIGINT would insert NULL.
+BigId = BigInteger().with_variant(Integer, 'sqlite')
+
+
 class Base(DeclarativeBase): ...
 
 
@@ -45,7 +49,7 @@ class Token(Base):
 class NotificationLog(Base):
     __tablename__ = 'notification_log'
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigId, primary_key=True, autoincrement=True)
     token_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('tokens.id'), nullable=True, index=True)
     msg_id: Mapped[Optional[str]] = mapped_column(String(36), unique=True, nullable=True)
     source: Mapped[str] = mapped_column(String(16), nullable=False, default='device')
@@ -65,7 +69,7 @@ class NotificationDelivery(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     notification_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey('notification_log.id', ondelete='CASCADE'), nullable=False, index=True
+        BigId, ForeignKey('notification_log.id', ondelete='CASCADE'), nullable=False, index=True
     )
     token_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey('tokens.id', ondelete='SET NULL'), nullable=True, index=True
@@ -108,7 +112,7 @@ class VoiceChannel(Base):
 class VoiceLog(Base):
     __tablename__ = 'voice_log'
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(BigId, primary_key=True, autoincrement=True)
     token_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey('tokens.id', ondelete='SET NULL'), nullable=True, index=True
     )

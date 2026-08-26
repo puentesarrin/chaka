@@ -18,6 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **The admin UI and its `/api` routes now authenticate with a session cookie instead of HTTP Basic.** Client-facing endpoints are untouched: `/ws`, `POST /api/notify`, and `POST /api/ack` still use relay tokens. Scripts that called an admin `/api` route with Basic credentials must log in through `POST /login` and reuse the cookie.
 - `ADMIN_USER` / `ADMIN_PASSWORD` are now **bootstrap credentials**: they are accepted only while the `users` table is empty, and the first successful login is persisted as a real user account. An existing deployment upgrades by running `chaka db upgrade` and signing in with the credentials it already has.
+- **SQLite is now the default database.** `aiosqlite` is a base dependency and `DATABASE_URL` defaults to `sqlite+aiosqlite:///./chaka.db`, so a fresh install runs with no database server. MySQL and PostgreSQL move to extras: `pip install chaka[mysql]` and `pip install chaka[postgres]`. Existing deployments are unaffected as long as `DATABASE_URL` is set — but an upgrade must install the matching extra, since `aiomysql` is no longer pulled in by default.
+
+### Fixed
+
+- Autoincrementing `BigInteger` primary keys (`notification_log.id`, `voice_log.id`) inserted `NULL` on SQLite: only a key declared exactly `INTEGER` is a rowid alias there. They now use `models.BigId` (`BigInteger` with an `Integer` variant for SQLite); the DDL on MySQL and PostgreSQL is unchanged (`BIGINT` / `BIGSERIAL`).
+- SQLite connections now set `PRAGMA foreign_keys=ON`, without which the schema's `ondelete` rules would silently not fire, and `PRAGMA journal_mode=WAL` so readers don't block the writer.
 
 ### Migrations
 
