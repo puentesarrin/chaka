@@ -311,7 +311,9 @@ tbody td {
   color: var(--muted);
   margin-bottom: 16px;
 }
-.modal-box input[type="text"] {
+.modal-box input[type="text"],
+.modal-box input[type="email"],
+.modal-box input[type="password"] {
   display: block;
   width: 100%;
   margin-top: 6px;
@@ -322,7 +324,9 @@ tbody td {
   border-radius: var(--radius);
   font-size: 13px;
 }
-.modal-box input[type="text"]:focus {
+.modal-box input[type="text"]:focus,
+.modal-box input[type="email"]:focus,
+.modal-box input[type="password"]:focus {
   outline: 2px solid var(--accent);
   border-color: transparent;
 }
@@ -423,3 +427,94 @@ tbody td {
 .toast.out     { animation: toast-out .2s ease forwards; }
 @keyframes toast-in  { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes toast-out { from { opacity: 1; } to { opacity: 0; transform: translateY(8px); } }
+
+/* ── Header account ── */
+.header-account {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.header-user {
+  font-size: 13px;
+  color: var(--muted);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.logout-form { display: flex; }
+
+/* ── Login ── */
+.login-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+}
+.login-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 32px;
+  width: 100%;
+  max-width: 360px;
+}
+.login-logo {
+  height: 26px;
+  filter: invert(1);
+  margin-bottom: 20px;
+}
+.login-box h1 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+.login-box label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+.login-box input {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.login-box input:focus {
+  outline: 2px solid var(--accent);
+  border-color: transparent;
+}
+.login-box button { width: 100%; margin-top: 4px; }
+.login-error {
+  background: rgba(239,68,68,.12);
+  color: var(--red);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+/* ── Misc form affordances ── */
+.optional {
+  font-weight: 400;
+  text-transform: none;
+  font-size: 11px;
+  color: var(--muted);
+}
+button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}

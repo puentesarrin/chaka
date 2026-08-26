@@ -18,7 +18,7 @@ async def list_logs(
     per_page: int = Query(50, ge=1, le=200),
     token_id: Optional[int] = Query(None),
     db: AsyncSession = Depends(database.get_db),
-    _: str = Depends(auth.require_admin),
+    _: models.User = Depends(auth.require_admin),
 ):
     count_q = select(func.count(models.NotificationLog.id))
     if token_id is not None:
@@ -68,7 +68,7 @@ async def list_connection_events(
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(database.get_db),
-    _: str = Depends(auth.require_admin),
+    _: models.User = Depends(auth.require_admin),
 ):
     events_filter = models.TokenEvent.event.in_(['connected', 'disconnected'])
 
@@ -98,7 +98,7 @@ async def list_connection_events(
 
 
 @router.get('/server-log', response_class=PlainTextResponse)
-async def server_log(request: Request, _: str = Depends(auth.require_admin)):
+async def server_log(request: Request, _: models.User = Depends(auth.require_admin)):
     log_file = request.app.state.settings.log_file
     try:
         with open(log_file, 'r') as f:
@@ -109,7 +109,7 @@ async def server_log(request: Request, _: str = Depends(auth.require_admin)):
 
 
 @router.get('/heartbeat-log', response_class=PlainTextResponse)
-async def heartbeat_log(request: Request, _: str = Depends(auth.require_admin)):
+async def heartbeat_log(request: Request, _: models.User = Depends(auth.require_admin)):
     log_file = request.app.state.settings.heartbeat_log_file
     try:
         with open(log_file, 'r') as f:

@@ -1,5 +1,18 @@
 'use strict';
 
+// ── Session ───────────────────────────────────────────────────
+// An expired or revoked session makes the admin API answer 401 JSON rather than
+// HTML, which would surface as an opaque failure in every panel. Catch it once
+// here and send the browser to the login page instead.
+const _fetch = window.fetch.bind(window);
+window.fetch = async function(...args) {
+  const response = await _fetch(...args);
+  if (response.status === 401) {
+    window.location.href = '/login?next=' + encodeURIComponent(window.location.pathname);
+  }
+  return response;
+};
+
 // ── Tab switching ──────────────────────────────────────────────
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -13,6 +26,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     if (tab === 'voice-log') loadVoiceLog(1);
     if (tab === 'logs') loadLogs(1);
     if (tab === 'server-log') refreshServerLog();
+    if (tab === 'users') refreshUsers();
   });
 });
 
@@ -1030,6 +1044,191 @@ function startVoiceLogPolling() {
   }, 5000);
 }
 
+// ── Users ─────────────────────────────────────────────────────
+let _currentUserId = null;
+
+async function refreshUsers() {
+  const tbody = document.getElementById('users-tbody');
+  if (!tbody) return;
+  try {
+    const [usersRes, meRes] = await Promise.all([fetch('/api/users'), fetch('/api/users/me')]);
+    if (!usersRes.ok || !meRes.ok) throw new Error('request failed');
+    const users = await usersRes.json();
+    _currentUserId = (await meRes.json()).id;
+    if (!users.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty">No users yet.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = users.map(u => {
+      const isSelf = u.id === _currentUserId;
+      return `<tr>
+        <td>${esc(u.username)}${isSelf ? ' <span class="badge">you</span>' : ''}</td>
+        <td>${u.full_name ? esc(u.full_name) : '<span class="muted">—</span>'}</td>
+        <td>${esc(u.email)}</td>
+        <td>
+          <button class="small perm-btn ${u.is_active ? 'perm-on' : 'perm-off'}"
+                  ${isSelf ? 'disabled title="You cannot deactivate your own account"' : ''}
+                  onclick="toggleUserActive(${u.id}, ${!u.is_active})">
+            ${u.is_active ? 'Active' : 'Inactive'}
+          </button>
+        </td>
+        <td><span class="ts" data-ts="${u.created_at}">${fmtDatetime(u.created_at)}</span></td>
+        <td>${u.last_login_at
+              ? `<span class="ts" data-ts="${u.last_login_at}">${fmtDatetime(u.last_login_at)}</span>`
+              : '<span class="muted">never</span>'}</td>
+        <td class="td-flex" style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="small secondary" onclick="openEditUserModal(${u.id})">Edit</button>
+          <button class="small secondary" onclick="openPasswordModal(${u.id}, '${esc(u.username)}')">Password</button>
+          <button class="small danger" ${isSelf ? 'disabled title="You cannot delete your own account"' : ''}
+                  onclick="deleteUser(${u.id}, '${esc(u.username)}')">Delete</button>
+        </td>
+      </tr>`;
+    }).join('');
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">Failed to load users.</td></tr>';
+  }
+}
+
+async function _userRequest(url, options, successMessage) {
+  const r = await fetch(url, options);
+  if (!r.ok) {
+    const body = await r.json().catch(() => ({}));
+    throw new Error(_detail(body) || r.statusText);
+  }
+  if (successMessage) toast(successMessage, 'success');
+  return r;
+}
+
+// Pydantic reports validation errors as a list of {loc, msg}; a guard rejection
+// is a plain string. Render whichever came back.
+function _detail(body) {
+  const detail = body.detail;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    return detail.map(e => `${(e.loc || []).slice(-1)[0] || 'field'}: ${e.msg}`).join('; ');
+  }
+  return '';
+}
+
+window.toggleUserActive = async function(id, newValue) {
+  try {
+    await _userRequest('/api/users/' + id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_active: newValue }),
+    }, newValue ? 'User activated' : 'User deactivated');
+  } catch (err) {
+    toast('Error: ' + err.message, 'error');
+  }
+  refreshUsers();
+};
+
+window.deleteUser = async function(id, username) {
+  const ok = await showConfirm(`Delete user "${username}"?`);
+  if (!ok) return;
+  try {
+    await _userRequest('/api/users/' + id, { method: 'DELETE' }, 'User deleted');
+    refreshUsers();
+  } catch (err) {
+    toast('Error: ' + err.message, 'error');
+  }
+};
+
+window.openCreateUserModal = function() {
+  document.getElementById('create-user-form').reset();
+  document.getElementById('create-user-btn').disabled = false;
+  document.getElementById('create-user-modal').style.display = 'flex';
+  document.getElementById('new-user-username').focus();
+};
+window.closeCreateUserModal = function() {
+  document.getElementById('create-user-modal').style.display = 'none';
+};
+window.submitCreateUser = async function(e) {
+  e.preventDefault();
+  const btn = document.getElementById('create-user-btn');
+  btn.disabled = true;
+  try {
+    await _userRequest('/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: document.getElementById('new-user-username').value.trim(),
+        email: document.getElementById('new-user-email').value.trim(),
+        full_name: document.getElementById('new-user-fullname').value.trim() || null,
+        password: document.getElementById('new-user-password').value,
+      }),
+    }, 'User created');
+    closeCreateUserModal();
+    refreshUsers();
+  } catch (err) {
+    toast('Error: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+window.openEditUserModal = async function(id) {
+  try {
+    const r = await fetch('/api/users');
+    if (!r.ok) throw new Error(r.statusText);
+    const user = (await r.json()).find(u => u.id === id);
+    if (!user) throw new Error('User not found');
+    document.getElementById('edit-user-id').value = id;
+    document.getElementById('edit-user-email').value = user.email;
+    document.getElementById('edit-user-fullname').value = user.full_name || '';
+    document.getElementById('edit-user-modal').style.display = 'flex';
+    document.getElementById('edit-user-email').focus();
+  } catch (err) {
+    toast('Error: ' + err.message, 'error');
+  }
+};
+window.closeEditUserModal = function() {
+  document.getElementById('edit-user-modal').style.display = 'none';
+};
+window.submitEditUser = async function(e) {
+  e.preventDefault();
+  const id = document.getElementById('edit-user-id').value;
+  try {
+    await _userRequest('/api/users/' + id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: document.getElementById('edit-user-email').value.trim(),
+        full_name: document.getElementById('edit-user-fullname').value.trim() || null,
+      }),
+    }, 'User updated');
+    closeEditUserModal();
+    refreshUsers();
+  } catch (err) {
+    toast('Error: ' + err.message, 'error');
+  }
+};
+
+window.openPasswordModal = function(id, username) {
+  document.getElementById('password-user-id').value = id;
+  document.getElementById('password-input').value = '';
+  document.getElementById('password-modal-title').textContent = 'Change Password — ' + username;
+  document.getElementById('password-modal').style.display = 'flex';
+  document.getElementById('password-input').focus();
+};
+window.closePasswordModal = function() {
+  document.getElementById('password-modal').style.display = 'none';
+};
+window.submitPassword = async function(e) {
+  e.preventDefault();
+  const id = document.getElementById('password-user-id').value;
+  try {
+    await _userRequest('/api/users/' + id + '/password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: document.getElementById('password-input').value }),
+    }, 'Password changed');
+    closePasswordModal();
+  } catch (err) {
+    toast('Error: ' + err.message, 'error');
+  }
+};
+
 // ── Esc closes any open modal ─────────────────────────────────
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
@@ -1043,6 +1242,9 @@ document.addEventListener('keydown', (e) => {
   if (document.getElementById('connection-log-modal').style.display === 'flex') closeConnectionLogModal();
   if (document.getElementById('create-channel-modal').style.display === 'flex') closeCreateChannelModal();
   if (document.getElementById('rename-channel-modal').style.display === 'flex') closeRenameChannelModal();
+  if (document.getElementById('create-user-modal').style.display === 'flex') closeCreateUserModal();
+  if (document.getElementById('edit-user-modal').style.display === 'flex') closeEditUserModal();
+  if (document.getElementById('password-modal').style.display === 'flex') closePasswordModal();
 });
 
 // ── Init ──────────────────────────────────────────────────────

@@ -4,7 +4,13 @@
   <a href="/"><img src="/static/logo-combo.svg" alt="Chaka" class="header-logo"></a>
   <span class="header-divider"></span>
   <h1>Chaka</h1>
-  <button id="tz-toggle" class="secondary small" style="margin-left:auto" onclick="toggleTzMode()">Local</button>
+  <div class="header-account">
+    <button id="tz-toggle" class="secondary small" onclick="toggleTzMode()">Local</button>
+    <span class="header-user" title="{{ user.email }}">{{ user.full_name or user.username }}</span>
+    <form method="post" action="/logout" class="logout-form">
+      <button type="submit" class="secondary small">Sign out</button>
+    </form>
+  </div>
 </header>
 
 <div class="tabs-wrapper">
@@ -15,6 +21,7 @@
   <button class="tab-btn" data-tab="voice-log">Voice Activity</button>
   <button class="tab-btn" data-tab="logs">Notification Log</button>
   <button class="tab-btn" data-tab="server-log">Server Log</button>
+  <button class="tab-btn" data-tab="users">Users</button>
 </nav>
 </div>
 
@@ -36,6 +43,9 @@
   </div>
   <div id="tab-server-log" class="tab-panel">
     {% include "partials/server_log.html" %}
+  </div>
+  <div id="tab-users" class="tab-panel">
+    {% include "partials/users.html" %}
   </div>
 </main>
 
@@ -278,6 +288,71 @@
       <div class="modal-actions">
         <button type="submit">Save</button>
         <button type="button" onclick="closeRenameChannelModal()" class="secondary">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Create user modal -->
+<div id="create-user-modal" class="modal" style="display:none">
+  <div class="modal-overlay" onclick="closeCreateUserModal()"></div>
+  <div class="modal-box">
+    <h2>Create User</h2>
+    <form id="create-user-form" onsubmit="submitCreateUser(event)">
+      <label>Username
+        <input type="text" id="new-user-username" placeholder="e.g. jorge" autocomplete="off" required>
+      </label>
+      <label>Email
+        <input type="email" id="new-user-email" placeholder="jorge@example.com" autocomplete="off" required>
+      </label>
+      <label>Full name <span class="optional">(optional)</span>
+        <input type="text" id="new-user-fullname" autocomplete="off">
+      </label>
+      <label>Password
+        <input type="password" id="new-user-password" autocomplete="new-password" minlength="8" required>
+      </label>
+      <div class="modal-actions">
+        <button type="submit" id="create-user-btn">Create</button>
+        <button type="button" onclick="closeCreateUserModal()" class="secondary">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit user modal -->
+<div id="edit-user-modal" class="modal" style="display:none">
+  <div class="modal-overlay" onclick="closeEditUserModal()"></div>
+  <div class="modal-box">
+    <h2>Edit User</h2>
+    <form id="edit-user-form" onsubmit="submitEditUser(event)">
+      <label>Email
+        <input type="email" id="edit-user-email" autocomplete="off" required>
+      </label>
+      <label>Full name <span class="optional">(optional)</span>
+        <input type="text" id="edit-user-fullname" autocomplete="off">
+      </label>
+      <input type="hidden" id="edit-user-id">
+      <div class="modal-actions">
+        <button type="submit">Save</button>
+        <button type="button" onclick="closeEditUserModal()" class="secondary">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Change password modal -->
+<div id="password-modal" class="modal" style="display:none">
+  <div class="modal-overlay" onclick="closePasswordModal()"></div>
+  <div class="modal-box">
+    <h2 id="password-modal-title">Change Password</h2>
+    <form id="password-form" onsubmit="submitPassword(event)">
+      <label>New password
+        <input type="password" id="password-input" autocomplete="new-password" minlength="8" required>
+      </label>
+      <input type="hidden" id="password-user-id">
+      <div class="modal-actions">
+        <button type="submit">Save</button>
+        <button type="button" onclick="closePasswordModal()" class="secondary">Cancel</button>
       </div>
     </form>
   </div>

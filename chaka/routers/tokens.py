@@ -27,7 +27,7 @@ def _event(token: models.Token, event: str, detail: Optional[dict] = None) -> mo
 async def create_token(
     body: schemas.TokenCreate,
     db: AsyncSession = Depends(database.get_db),
-    _: str = Depends(auth.require_admin),
+    _: models.User = Depends(auth.require_admin),
 ):
     token_value = secrets.token_urlsafe(32)
     token = models.Token(name=body.name, token=token_value, created_at=clock.utcnow())
@@ -44,7 +44,7 @@ async def rename_token(
     token_id: int,
     body: schemas.TokenRename,
     db: AsyncSession = Depends(database.get_db),
-    _: str = Depends(auth.require_admin),
+    _: models.User = Depends(auth.require_admin),
 ):
     result = await db.execute(select(models.Token).where(models.Token.id == token_id))
     token = result.scalar_one_or_none()
@@ -63,7 +63,7 @@ async def revoke_token(
     token_id: int,
     request: Request,
     db: AsyncSession = Depends(database.get_db),
-    _: str = Depends(auth.require_admin),
+    _: models.User = Depends(auth.require_admin),
 ):
     result = await db.execute(select(models.Token).where(models.Token.id == token_id))
     token = result.scalar_one_or_none()
@@ -84,7 +84,7 @@ async def set_token_permissions(
     body: schemas.TokenPermissions,
     request: Request,
     db: AsyncSession = Depends(database.get_db),
-    _: str = Depends(auth.require_admin),
+    _: models.User = Depends(auth.require_admin),
 ):
     result = await db.execute(select(models.Token).where(models.Token.id == token_id))
     token = result.scalar_one_or_none()
@@ -120,7 +120,7 @@ async def set_token_permissions(
 async def restore_token(
     token_id: int,
     db: AsyncSession = Depends(database.get_db),
-    _: str = Depends(auth.require_admin),
+    _: models.User = Depends(auth.require_admin),
 ):
     result = await db.execute(select(models.Token).where(models.Token.id == token_id))
     token = result.scalar_one_or_none()
@@ -141,7 +141,7 @@ async def regenerate_token(
     token_id: int,
     request: Request,
     db: AsyncSession = Depends(database.get_db),
-    _: str = Depends(auth.require_admin),
+    _: models.User = Depends(auth.require_admin),
 ):
     result = await db.execute(select(models.Token).where(models.Token.id == token_id))
     token = result.scalar_one_or_none()
@@ -161,7 +161,7 @@ async def get_token_events(
     page: int = 1,
     per_page: int = 20,
     db: AsyncSession = Depends(database.get_db),
-    _: str = Depends(auth.require_admin),
+    _: models.User = Depends(auth.require_admin),
 ):
     result = await db.execute(select(models.Token).where(models.Token.id == token_id))
     if not result.scalar_one_or_none():
@@ -202,7 +202,7 @@ async def get_token_deliveries(
     page: int = 1,
     per_page: int = 20,
     db: AsyncSession = Depends(database.get_db),
-    _: str = Depends(auth.require_admin),
+    _: models.User = Depends(auth.require_admin),
 ):
     result = await db.execute(select(models.Token).where(models.Token.id == token_id))
     if not result.scalar_one_or_none():

@@ -20,17 +20,21 @@ factory just populates ``app.state`` with the collaborators.
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 import logging.handlers
+import secrets
 from typing import Any, List, Optional, Tuple
+from urllib.parse import quote
 
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, Request, WebSocket
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from chaka import application, database, interfaces, repositories
+from chaka import application, auth, database, interfaces, repositories
 from chaka.manager import ConnectionManager
-from chaka.routers import ack, admin, channels, clients, logs, notify, send, tokens, voice
+from chaka.routers import ack, admin, channels, clients, logs, notify, send, session, tokens, users, voice
 
 LOG_FORMAT = '%(asctime)s %(levelname)s %(name)s: %(message)s'
 
@@ -51,6 +55,7 @@ class ChakaApplicationFactory:
         settings = settings or application.Settings.from_env()
         self._init_sentry(settings)
         logger = self._make_logger(settings)
+        settings = self._ensure_secret_key(settings, logger)
         heartbeat_logger = self._make_heartbeat_logger(settings)
 
         engine = database.make_engine(settings.database_url)
@@ -68,11 +73,13 @@ class ChakaApplicationFactory:
         app.state.sessionmaker = sessionmaker
         app.state.templates = Jinja2Templates(directory=self._template_dirs(settings))
         app.state.handler = handler
+        app.state.user_repo = repositories.UserRepository(sessionmaker)
         app.state.token_repo = repositories.TokenRepository(sessionmaker)
         app.state.notification_repo = repositories.NotificationRepository(sessionmaker)
         app.state.channel_repo = repositories.VoiceChannelRepository(sessionmaker)
 
         self._mount_static(app, settings)
+        self._register_exception_handlers(app)
         self._register_routers(app, routers if routers is not None else self.default_routers())
 
         async def websocket_route(websocket: WebSocket, token: str = '', client: str = '', version: str = '') -> None:
@@ -90,7 +97,9 @@ class ChakaApplicationFactory:
     def default_routers(self) -> List[Tuple[Any, Optional[str]]]:
         """Return ``(router, prefix)`` pairs. Override/extend to add routers."""
         return [
+            (session.router, None),
             (admin.router, None),
+            (users.router, '/api'),
             (tokens.router, '/api'),
             (clients.router, '/api'),
             (channels.router, '/api'),
@@ -100,6 +109,32 @@ class ChakaApplicationFactory:
             (ack.router, '/api'),
             (voice.router, '/api'),
         ]
+
+    def _ensure_secret_key(self, settings: application.Settings, logger: logging.Logger) -> application.Settings:
+        """Fill in a random ``secret_key`` when none is configured.
+
+        Sessions stay valid only for the life of the process then — fine for a
+        first run, wrong for anything real, hence the warning: set ``SECRET_KEY``
+        so admins aren't signed out on every restart (and on every worker, since
+        each would otherwise sign with a different key)."""
+        if settings.secret_key:
+            return settings
+        logger.warning('SECRET_KEY is not set — generating an ephemeral one; sessions will not survive a restart')
+        return dataclasses.replace(settings, secret_key=secrets.token_urlsafe(48))
+
+    def _register_exception_handlers(self, app: FastAPI) -> None:
+        """Render an unauthenticated request as a redirect for a browser
+        navigation, and as JSON for everything else (the admin UI's fetch calls,
+        curl, …), so the UI can show a message instead of swallowing HTML."""
+
+        @app.exception_handler(auth.NotAuthenticated)
+        async def _unauthenticated(request: Request, exc: auth.NotAuthenticated):
+            if 'text/html' in request.headers.get('accept', ''):
+                target = request.url.path
+                if request.url.query:
+                    target = f'{target}?{request.url.query}'
+                return RedirectResponse(f'{session.LOGIN_PATH}?next={quote(target, safe="")}', status_code=303)
+            return JSONResponse({'detail': exc.detail}, status_code=exc.status_code)
 
     def _register_routers(self, app: FastAPI, routers: List[Tuple[Any, Optional[str]]]) -> None:
         for router, prefix in routers:

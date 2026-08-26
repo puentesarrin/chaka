@@ -5,6 +5,24 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Admin user accounts.** A new `users` table (`username`, `email`, `full_name`, `password_hash`, `is_active`, `created_at`, `last_login_at`) replaces the single hard-coded admin. Passwords are hashed with PBKDF2-HMAC-SHA256 from the standard library, with a per-user salt and a cost recorded in the hash, so raising it later re-hashes each account on its next login rather than invalidating it. No new dependency.
+- **Session login** for the admin UI: `GET`/`POST /login`, `POST /logout`, and a signed, HttpOnly, `SameSite=Lax` session cookie (`SECRET_KEY`, `SESSION_COOKIE`, `SESSION_MAX_AGE`, `SESSION_COOKIE_SECURE`). Deactivating or deleting a user invalidates their session on the next request.
+- **Users tab** in the admin UI — create, edit, activate/deactivate, change password, delete — and `/api/users` behind the same session auth.
+- **`chaka user create | list | passwd`** for managing accounts from the command line; `chaka init` now writes a random `SECRET_KEY` into the generated `.env`.
+
+### Changed
+
+- **The admin UI and its `/api` routes now authenticate with a session cookie instead of HTTP Basic.** Client-facing endpoints are untouched: `/ws`, `POST /api/notify`, and `POST /api/ack` still use relay tokens. Scripts that called an admin `/api` route with Basic credentials must log in through `POST /login` and reuse the cookie.
+- `ADMIN_USER` / `ADMIN_PASSWORD` are now **bootstrap credentials**: they are accepted only while the `users` table is empty, and the first successful login is persisted as a real user account. An existing deployment upgrades by running `chaka db upgrade` and signing in with the credentials it already has.
+
+### Migrations
+
+- `0003_users` — creates the `users` table. Nothing is seeded.
+
 ## [0.3.0] - 2026-08-09
 
 ### Added

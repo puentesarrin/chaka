@@ -18,7 +18,7 @@ async def list_voice_logs(
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(database.get_db),
-    _: str = Depends(auth.require_admin),
+    _: models.User = Depends(auth.require_admin),
 ):
     total = (await db.execute(select(func.count(models.VoiceLog.id)))).scalar_one()
 

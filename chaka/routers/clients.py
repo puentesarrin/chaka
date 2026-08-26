@@ -2,13 +2,13 @@ from typing import List
 
 from fastapi import APIRouter, Depends, Request
 
-from chaka import auth, schemas
+from chaka import auth, models, schemas
 
 router = APIRouter(tags=['clients'])
 
 
 @router.get('/clients', response_model=List[schemas.ClientInfo])
-async def list_clients(request: Request, _: str = Depends(auth.require_admin)):
+async def list_clients(request: Request, _: models.User = Depends(auth.require_admin)):
     clients = await request.app.state.manager.get_clients()
     return [
         schemas.ClientInfo(

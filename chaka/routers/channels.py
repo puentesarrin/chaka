@@ -49,7 +49,7 @@ def _build_response(
 async def list_channels(
     request: Request,
     db: AsyncSession = Depends(database.get_db),
-    _: str = Depends(auth.require_admin),
+    _: models.User = Depends(auth.require_admin),
 ):
     channels = (await db.execute(select(models.VoiceChannel).order_by(models.VoiceChannel.number))).scalars().all()
     stats = await request.app.state.manager.get_voice_channel_stats()
@@ -61,7 +61,7 @@ async def create_channel(
     body: schemas.VoiceChannelCreate,
     request: Request,
     db: AsyncSession = Depends(database.get_db),
-    _: str = Depends(auth.require_admin),
+    _: models.User = Depends(auth.require_admin),
 ):
     existing = (
         await db.execute(select(models.VoiceChannel).where(models.VoiceChannel.number == body.number))
@@ -82,7 +82,7 @@ async def update_channel(
     body: schemas.VoiceChannelUpdate,
     request: Request,
     db: AsyncSession = Depends(database.get_db),
-    _: str = Depends(auth.require_admin),
+    _: models.User = Depends(auth.require_admin),
 ):
     manager: interfaces.IConnectionManager = request.app.state.manager
     channel = (
@@ -107,7 +107,7 @@ async def delete_channel(
     channel_id: int,
     request: Request,
     db: AsyncSession = Depends(database.get_db),
-    _: str = Depends(auth.require_admin),
+    _: models.User = Depends(auth.require_admin),
 ):
     manager: interfaces.IConnectionManager = request.app.state.manager
     channel = (

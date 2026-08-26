@@ -15,7 +15,7 @@ It is transport-agnostic about *what* you relay — any JSON notification payloa
 - **Missed-message replay** — the server tracks `last_delivered_at` per token and replays up to 100 missed notifications on reconnect (single batched frame).
 - **Push-to-talk voice** — named voice channels carried on the same WebSocket as binary frames, with a per-channel single-transmitter lock, mute, and live peer presence.
 - **Token-based auth** with four independent permissions: `can_send`, `can_receive`, `can_talk`, `can_hear`.
-- **Admin UI** (HTTP Basic) — token CRUD and permissions, live connected-client monitoring, voice channels, notification history with per-token delivery/ack tracking, and log tailing.
+- **Admin UI** (session login) — user accounts with hashed passwords, token CRUD and permissions, live connected-client monitoring, voice channels, notification history with per-token delivery/ack tracking, and log tailing.
 - **Operational niceties** — rotating file logs, an optional push **heartbeat** to any status-page/uptime monitor (Uptime Kuma, Healthchecks.io, …), optional Sentry error reporting.
 
 See [PROTOCOL.md](https://github.com/puentesarrin/chaka/blob/main/PROTOCOL.md) for the full wire protocol (frames, permissions, close codes).
@@ -63,8 +63,12 @@ All configuration is via environment variables (a `.env` file is loaded automati
 | Variable | Required | Purpose | Default |
 |---|---|---|---|
 | `DATABASE_URL` | yes | SQLAlchemy async DB URL | `mysql+aiomysql://user:pass@localhost:3306/chaka` or `postgresql+asyncpg://user:pass@localhost:5432/chaka` |
-| `ADMIN_USER` | yes | Admin UI Basic-auth user | `admin` |
-| `ADMIN_PASSWORD` | yes | Admin UI Basic-auth password — **change this** | `changeme` |
+| `SECRET_KEY` | recommended | Signs admin session cookies; generated per start if unset (see below) | _(ephemeral)_ |
+| `ADMIN_USER` | yes | Bootstrap admin username (used only until the first user exists) | `admin` |
+| `ADMIN_PASSWORD` | yes | Bootstrap admin password — **change this** | `changeme` |
+| `SESSION_COOKIE` | no | Session cookie name | `chaka_session` |
+| `SESSION_MAX_AGE` | no | Session lifetime (seconds) | `43200` (12 h) |
+| `SESSION_COOKIE_SECURE` | no | Send the session cookie only over HTTPS | `false` |
 | `LOG_FILE` | no | Rotating application log path | `./chaka.log` |
 | `LOG_MAX_BYTES` | no | Log rotation size (5 MB) | `5242880` |
 | `LOG_BACKUP_COUNT` | no | Rotated log files kept | `5` |
@@ -97,13 +101,49 @@ Open the admin UI, log in with `ADMIN_USER` / `ADMIN_PASSWORD`, and create a
 token on the **Tokens** tab (the value is shown once). Point a client at
 `ws://HOST:PORT/ws?token=YOUR_TOKEN`.
 
+### Admin accounts
+
+The admin UI authenticates against a `users` table — `username`, `email`,
+`full_name`, `password_hash`, `is_active`, `created_at`, `last_login_at` —
+with a signed, HttpOnly session cookie. Passwords are hashed with PBKDF2-HMAC-SHA256
+(stdlib, per-user salt); the hash records its own cost, so raising it later
+re-hashes each account on its next login instead of invalidating it.
+
+**First login.** While the table is empty, `ADMIN_USER` / `ADMIN_PASSWORD` from
+the environment still work, and the first successful login is saved as a real
+user row. An existing deployment therefore keeps working across the upgrade —
+run `chaka db upgrade` and sign in with the credentials you already have. Once
+any user exists those environment credentials stop being accepted, so change the
+bootstrapped account's email and password on the **Users** tab (or skip the
+bootstrap entirely with `chaka user create`).
+
+Every active user is a full admin. To keep an instance from locking itself out,
+you cannot deactivate or delete your own account, nor the last active one.
+Deactivating or deleting a user invalidates their session on the next request.
+
+**`SECRET_KEY`** signs the session cookies. Leave it unset and Chaka generates
+one per start: sessions then die on every restart, and each worker signs
+differently. Set it in `.env` (`chaka init` writes a random one for you), keep it
+secret, and note that changing it signs everyone out. Turn on
+`SESSION_COOKIE_SECURE` once you serve Chaka over TLS.
+
+Only the admin UI and its `/api` routes use sessions. Client-facing endpoints
+are unchanged: `/ws`, `POST /api/notify`, and `POST /api/ack` still authenticate
+with relay tokens.
+
 ### CLI
 
 ```
 chaka serve [--host H] [--port P]      run the server
 chaka init  [--path DIR]               copy assets + write .env + migrate
 chaka db upgrade [--revision REV]      apply migrations
+
+chaka user create --username U --email E [--full-name N] [--password P]
+chaka user list                        list accounts
+chaka user passwd --username U [--password P]
 ```
+
+`--password` is prompted for (twice, hidden) when omitted.
 
 ## Use as a library
 
@@ -217,7 +257,7 @@ Run the server bound to `127.0.0.1` behind nginx. Use a **single worker** — th
 ## Status & limitations
 
 - **Single-process only.** No cross-process/cross-instance fan-out.
-- **Single admin account** (HTTP Basic) governing all tokens; no per-user accounts.
+- **No roles.** Every active user account is a full admin; there is no read-only or scoped access.
 - **Best-effort delivery** — notifications are persisted and replayed on reconnect (up to 100), but there is no guaranteed/ack-driven retransmission; voice audio is relayed live and not stored.
 
 ## License

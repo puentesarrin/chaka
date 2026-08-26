@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import List, Optional, Sequence
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 
 from chaka import clock, interfaces, models
 from chaka.database import SessionMaker
@@ -49,6 +49,61 @@ class VoiceLogRepository(interfaces.IVoiceLog):
                 .where(models.VoiceLog.id == log_id)
                 .values(ended_at=clock.utcnow(), bytes_relayed=bytes_relayed)
             )
+            await db.commit()
+
+
+class UserRepository:
+    """Admin-UI accounts. Used by the auth layer on every authenticated request,
+    so lookups are by primary key or by the unique ``username``."""
+
+    def __init__(self, sessionmaker: SessionMaker) -> None:
+        self._sessionmaker = sessionmaker
+
+    async def get(self, user_id: int) -> Optional[models.User]:
+        async with self._sessionmaker() as db:
+            result = await db.execute(select(models.User).where(models.User.id == user_id))
+            return result.scalar_one_or_none()
+
+    async def get_by_username(self, username: str) -> Optional[models.User]:
+        async with self._sessionmaker() as db:
+            result = await db.execute(select(models.User).where(models.User.username == username))
+            return result.scalar_one_or_none()
+
+    async def count(self) -> int:
+        async with self._sessionmaker() as db:
+            result = await db.execute(select(func.count()).select_from(models.User))
+            return int(result.scalar() or 0)
+
+    async def create(
+        self,
+        *,
+        username: str,
+        email: str,
+        password_hash: str,
+        full_name: Optional[str] = None,
+        is_active: bool = True,
+    ) -> models.User:
+        async with self._sessionmaker() as db:
+            user = models.User(
+                username=username,
+                email=email,
+                full_name=full_name,
+                password_hash=password_hash,
+                is_active=is_active,
+                created_at=clock.utcnow(),
+            )
+            db.add(user)
+            await db.commit()
+            return user
+
+    async def set_password_hash(self, user_id: int, password_hash: str) -> None:
+        async with self._sessionmaker() as db:
+            await db.execute(update(models.User).where(models.User.id == user_id).values(password_hash=password_hash))
+            await db.commit()
+
+    async def mark_login(self, user_id: int, when: datetime) -> None:
+        async with self._sessionmaker() as db:
+            await db.execute(update(models.User).where(models.User.id == user_id).values(last_login_at=when))
             await db.commit()
 
 

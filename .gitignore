@@ -10,6 +10,7 @@ dist/
 .coverage
 .coverage.*
 htmlcov/
+uv.lock
 
 # Virtualenvs
 venv/
@@ -24,3 +25,5 @@ env/
 .idea/
 .vscode/
 .DS_Store
+*.sw[a-p]
+*~

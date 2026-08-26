@@ -44,6 +44,10 @@ class Settings:
     database_url: str = 'mysql+aiomysql://user:pass@localhost:3306/chaka'
     admin_user: str = 'admin'
     admin_password: str = 'changeme'
+    secret_key: str = ''
+    session_cookie: str = 'chaka_session'
+    session_max_age: int = 12 * 60 * 60
+    session_cookie_secure: bool = False
     log_file: str = './chaka.log'
     log_max_bytes: int = 5 * 1024 * 1024
     log_backup_count: int = 5
@@ -63,6 +67,10 @@ class Settings:
             database_url=os.getenv('DATABASE_URL', cls.database_url),
             admin_user=os.getenv('ADMIN_USER', cls.admin_user),
             admin_password=os.getenv('ADMIN_PASSWORD', cls.admin_password),
+            secret_key=os.getenv('SECRET_KEY', cls.secret_key),
+            session_cookie=os.getenv('SESSION_COOKIE', cls.session_cookie),
+            session_max_age=int(os.getenv('SESSION_MAX_AGE', cls.session_max_age)),
+            session_cookie_secure=cls._flag(os.getenv('SESSION_COOKIE_SECURE'), cls.session_cookie_secure),
             log_file=os.getenv('LOG_FILE', cls.log_file),
             log_max_bytes=int(os.getenv('LOG_MAX_BYTES', cls.log_max_bytes)),
             log_backup_count=int(os.getenv('LOG_BACKUP_COUNT', cls.log_backup_count)),
@@ -72,6 +80,13 @@ class Settings:
             sentry_dsn=os.getenv('SENTRY_DSN', cls.sentry_dsn),
             sentry_traces_sample_rate=float(os.getenv('SENTRY_TRACES_SAMPLE_RATE', cls.sentry_traces_sample_rate)),
         )
+
+    @staticmethod
+    def _flag(value: Optional[str], default: bool) -> bool:
+        if value is None or not value.strip():
+            return default
+        else:
+            return value.strip().lower() in ('1', 'true', 'yes', 'on')
 
 
 class ChakaApp:
