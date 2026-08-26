@@ -1,16 +1,5 @@
 """Admin authentication: signed-cookie sessions over database-backed users.
 
-The pieces:
-
-- :func:`authenticate` — verify a username/password against the ``users`` table.
-- :func:`issue_session` / :func:`clear_session` — set and drop the signed cookie.
-- :func:`require_admin` — the FastAPI dependency every admin route depends on.
-  It re-reads the user on each request, so deactivating or deleting an account
-  takes effect immediately rather than at cookie expiry.
-- :class:`NotAuthenticated` — a 401 the app renders as a redirect to the login
-  page for browser navigations, and as JSON for API calls (see
-  :func:`chaka.factory.ChakaApplicationFactory._register_exception_handlers`).
-
 **Bootstrap.** While the ``users`` table is empty, ``ADMIN_USER`` /
 ``ADMIN_PASSWORD`` from the environment still log in — and the first successful
 login is persisted as a real user row. That keeps an upgraded deployment
@@ -106,8 +95,6 @@ def clear_session(response: Response, settings) -> None:
 
 
 async def session_user(request: Request) -> Optional[models.User]:
-    """The active user for this request, or ``None`` if the session is missing,
-    expired, forged, or points at an account that is gone or deactivated."""
     settings = request.app.state.settings
     token = request.cookies.get(settings.session_cookie)
     if not token:
@@ -127,7 +114,6 @@ async def session_user(request: Request) -> Optional[models.User]:
 
 
 async def require_admin(request: Request) -> models.User:
-    """Dependency for every admin route: the signed-in user, or a 401."""
     user = await session_user(request)
     if user is None:
         raise NotAuthenticated()
