@@ -3,6 +3,7 @@
     chaka serve [--host H] [--port P]      run the server
     chaka init  [--path DIR]               scaffold a server into DIR
     chaka db upgrade [--revision REV]      apply database migrations
+    chaka db downgrade --revision REV      roll migrations back
     chaka user create|list|passwd          manage admin-UI accounts
 
 `init` copies the bundled ``static/`` and ``templates/`` into the target
@@ -57,6 +58,12 @@ def db_upgrade(revision: str = 'head') -> None:
     from alembic import command
 
     command.upgrade(_alembic_config(), revision)
+
+
+def db_downgrade(revision: str) -> None:
+    from alembic import command
+
+    command.downgrade(_alembic_config(), revision)
 
 
 def serve(host: str, port: int) -> None:
@@ -195,6 +202,8 @@ def main(argv=None) -> None:
     db_sub = p_db.add_subparsers(dest='db_command', required=True)
     p_upgrade = db_sub.add_parser('upgrade', help='apply migrations to head (or --revision)')
     p_upgrade.add_argument('--revision', default='head')
+    p_downgrade = db_sub.add_parser('downgrade', help='roll migrations back to --revision')
+    p_downgrade.add_argument('--revision', required=True)
 
     args = parser.parse_args(argv)
 
@@ -204,6 +213,8 @@ def main(argv=None) -> None:
         init(args.path)
     elif args.command == 'db' and args.db_command == 'upgrade':
         db_upgrade(args.revision)
+    elif args.command == 'db' and args.db_command == 'downgrade':
+        db_downgrade(args.revision)
     elif args.command == 'user':
         if args.user_command == 'create':
             user_create(args.username, args.email, args.full_name, args.password)
