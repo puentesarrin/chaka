@@ -13,7 +13,7 @@ Transports:
 
 - WebSocket: `?token=XXX` query param
 - HTTP: `Authorization: Bearer XXX` header
-- Admin-only endpoints: HTTP Basic auth
+- Admin-only endpoints: admin session cookie (see the admin UI login)
 
 WebSocket close codes:
 
@@ -138,7 +138,7 @@ The server updates the muted flag and broadcasts `voice_peer_muted`/`voice_peer_
 |---|---|---|---|
 | `POST` | `/api/notify` | Bearer (`can_send`) | Send a notification. Optional header `X-Source` (default `"device"`) |
 | `POST` | `/api/ack` | Bearer (`can_receive`) | ACK delivery |
-| `POST` | `/api/send` | Admin Basic | Send from the admin UI. Optional `token_ids` array to target specific clients. |
+| `POST` | `/api/send` | Admin session | Send from the admin UI. Optional `token_ids` array to target specific clients. |
 
 **`POST /api/notify` — request body:**
 ```json

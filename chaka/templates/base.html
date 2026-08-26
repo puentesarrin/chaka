@@ -10,6 +10,6 @@
 <body>
   {% block content %}{% endblock %}
   <footer>Chaka &middot; self-hosted real-time relay</footer>
-  <script src="/static/app.js"></script>
+  {% block scripts %}<script src="/static/app.js"></script>{% endblock %}
 </body>
 </html>

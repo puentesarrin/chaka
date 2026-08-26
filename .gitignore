@@ -10,6 +10,7 @@ dist/
 .coverage
 .coverage.*
 htmlcov/
+uv.lock
 
 # Virtualenvs
 venv/
@@ -19,8 +20,13 @@ env/
 # Secrets & runtime
 .env
 *.log
+*.db
+*.db-wal
+*.db-shm
 
 # Editors / OS
 .idea/
 .vscode/
 .DS_Store
+*.sw[a-p]
+*~

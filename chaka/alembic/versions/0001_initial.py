@@ -19,6 +19,9 @@ down_revision = None
 branch_labels = None
 depends_on = None
 
+# SQLite only auto-assigns a PK declared exactly INTEGER; BIGINT would insert NULL.
+BIG_ID = sa.BigInteger().with_variant(sa.Integer, "sqlite")
+
 
 def upgrade() -> None:
     op.create_table(
@@ -40,7 +43,7 @@ def upgrade() -> None:
 
     op.create_table(
         "notification_log",
-        sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
+        sa.Column("id", BIG_ID, autoincrement=True, nullable=False),
         sa.Column("token_id", sa.Integer(), nullable=True),
         sa.Column("msg_id", sa.String(length=36), nullable=True),
         sa.Column("source", sa.String(length=16), nullable=False, server_default="device"),
@@ -58,7 +61,7 @@ def upgrade() -> None:
     op.create_table(
         "notification_deliveries",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
-        sa.Column("notification_id", sa.BigInteger(), nullable=False),
+        sa.Column("notification_id", BIG_ID, nullable=False),
         sa.Column("token_id", sa.Integer(), nullable=True),
         sa.Column("token_name", sa.String(length=100), nullable=False),
         sa.Column("sent_at", sa.DateTime(), nullable=False),
@@ -97,7 +100,7 @@ def upgrade() -> None:
 
     op.create_table(
         "voice_log",
-        sa.Column("id", sa.BigInteger(), autoincrement=True, nullable=False),
+        sa.Column("id", BIG_ID, autoincrement=True, nullable=False),
         sa.Column("token_id", sa.Integer(), nullable=True),
         sa.Column("token_name", sa.String(length=100), nullable=False),
         sa.Column("channel_id", sa.Integer(), nullable=True),

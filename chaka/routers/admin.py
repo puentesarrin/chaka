@@ -14,8 +14,10 @@ router = APIRouter(tags=['admin'])
 async def admin_index(
     request: Request,
     db: AsyncSession = Depends(database.get_db),
-    _: str = Depends(auth.require_admin),
+    current: models.User = Depends(auth.require_admin),
 ):
     result = await db.execute(select(models.Token).order_by(models.Token.created_at.desc()))
     tokens = result.scalars().all()
-    return request.app.state.templates.TemplateResponse('index.html', {'request': request, 'tokens': tokens})
+    return request.app.state.templates.TemplateResponse(
+        'index.html', {'request': request, 'tokens': tokens, 'user': current}
+    )

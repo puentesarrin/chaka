@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 
-from chaka import auth, clock, frames, interfaces, repositories
+from chaka import auth, clock, frames, interfaces, models, repositories
 
 router = APIRouter(tags=['send'])
 
@@ -23,7 +23,7 @@ class SendPayload(BaseModel):
 async def send_message(
     payload: SendPayload,
     request: Request,
-    _: str = Depends(auth.require_admin),
+    _: models.User = Depends(auth.require_admin),
 ):
     manager: interfaces.IConnectionManager = request.app.state.manager
     notifications: repositories.NotificationRepository = request.app.state.notification_repo
