@@ -1,7 +1,7 @@
 import uuid
 from dataclasses import replace
 from datetime import UTC, datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from fastapi import WebSocket
 
@@ -34,12 +34,22 @@ class ConnectionManager(interfaces.IConnectionManager):
         self.backend = backend or InMemoryBackend()
         self.voice_log = voice_log or NullVoiceLog()
 
-    async def connect(self, websocket: WebSocket, connection: types.ClientConnection) -> Optional[str]:
+    async def connect(
+        self, websocket: WebSocket, connection: types.ClientConnection
+    ) -> Tuple[Optional[str], Optional[types.ClientSession]]:
+        incumbent_ws_id = await self.backend.find_ws_id_by_token(connection.token_id)
+        if incumbent_ws_id is not None:
+            # Peers and the voice log are told while the incumbent is still
+            # registered; once it is evicted both of these are no-ops.
+            await self.end_voice_transmission(incumbent_ws_id)
+            await self.leave_voice_channel(incumbent_ws_id)
+
         ws_id = str(uuid.uuid4())
         session = types.ClientSession(
             ws_id=ws_id, connection=connection, websocket=websocket, connected_at=datetime.now(UTC)
         )
-        return ws_id if await self.backend.register(session) else None
+        registered, displaced = await self.backend.register_displacing(session)
+        return (ws_id if registered else None), displaced
 
     async def disconnect(self, ws_id: str) -> None:
         await self.backend.unregister(ws_id)

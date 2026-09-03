@@ -187,11 +187,29 @@ class WebSocketHandler(interfaces.IWebSocketHandler):
             client=client,
             version=version,
         )
-        ws_id = await manager.connect(websocket, conn)
+        connected_at = datetime.now(UTC)
+        ws_id, displaced = await manager.connect(websocket, conn)
         if ws_id is None:
-            self.logger.warning('WS rejected: token=%s ip=%s — already connected', conn.token_name, ip)
+            self.logger.warning('WS rejected: token=%s ip=%s — could not register', conn.token_name, ip)
             await websocket.close(code=4409)
             return
+        if displaced is not None:
+            # Closed only once the registry is consistent, and with 4410 so the
+            # client can tell a deliberate replacement from a dropped socket.
+            held = (datetime.now(UTC) - displaced.connected_at).total_seconds()
+            self.logger.info(
+                'WS displaced: ws_id=%s token=%s held=%.0fs by ws_id=%s ip=%s',
+                displaced.ws_id,
+                conn.token_name,
+                held,
+                ws_id,
+                ip,
+            )
+            try:
+                await displaced.websocket.close(code=4410)
+            except Exception:
+                # Usually already gone — that is the case this exists for.
+                ...
         self.logger.info(
             'WS connect: ws_id=%s token=%s client=%s version=%s ip=%s',
             ws_id,
@@ -207,10 +225,12 @@ class WebSocketHandler(interfaces.IWebSocketHandler):
         if conn.can_receive and db_token.last_delivered_at is not None:
             await self._replay_missed(websocket, notifications, tokens, ws_id, db_token.last_delivered_at, conn)
 
+        close_code: Optional[int] = None
         try:
             while True:
                 message = await websocket.receive()
                 if message['type'] == 'websocket.disconnect':
+                    close_code = message.get('code')
                     break
                 raw_bytes = message.get('bytes')
                 raw_text = message.get('text')
@@ -218,8 +238,8 @@ class WebSocketHandler(interfaces.IWebSocketHandler):
                     await self._handle_binary(manager, ws_id, conn, raw_bytes)
                 elif raw_text:
                     await self._handle_text(manager, channels, notifications, tokens, ws_id, conn, raw_text)
-        except WebSocketDisconnect:
-            ...
+        except WebSocketDisconnect as exc:
+            close_code = exc.code
         finally:
             await manager.end_voice_transmission(ws_id)
             await manager.leave_voice_channel(ws_id)
@@ -228,7 +248,13 @@ class WebSocketHandler(interfaces.IWebSocketHandler):
                 await self._record_event(tokens, conn, 'disconnected', {'ip': ip})
             except Exception:
                 ...
-            self.logger.info('WS disconnect: ws_id=%s', ws_id)
+            self.logger.info(
+                'WS disconnect: ws_id=%s token=%s held=%.0fs code=%s',
+                ws_id,
+                conn.token_name,
+                (datetime.now(UTC) - connected_at).total_seconds(),
+                close_code if close_code is not None else '-',
+            )
 
     async def _handle_binary(
         self, manager: interfaces.IConnectionManager, ws_id: str, conn: types.ClientConnection, raw: bytes
