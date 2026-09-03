@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.5.0] - 2026-09-03
 
 ### Added
 
@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Displacing a session that is in a voice channel now runs the same teardown a normal disconnect does: its peers get `voice_peer_left`, and an open transmission is ended and its `voice_log` row closed. The displaced handler cannot do this itself — by the time it wakes up its session is already out of the registry and every teardown call is a no-op.
 - `IConnectionManager.connect()` now returns `(ws_id, displaced)`. The displaced session is handed back rather than closed, because closing needs the same lock the registry holds. **Breaking for anyone implementing the interface**; the shipped manager and handler are updated.
 - `4409` is now returned only when registration genuinely fails, which should not happen in normal operation. A reconnecting client used to receive it and no longer does.
+
+[0.5.0]: https://github.com/puentesarrin/chaka/releases/tag/v0.5.0
 
 ## [0.4.0] - 2026-08-26
 
