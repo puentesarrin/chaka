@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set, Union
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 from chaka import interfaces, types
 
@@ -36,6 +36,22 @@ class InMemoryBackend(interfaces.IBackend):
                     return False
             self._sessions[session.ws_id] = session
             return True
+
+    async def register_displacing(self, session: types.ClientSession) -> Tuple[bool, Optional[types.ClientSession]]:
+        # Eviction and registration under one lock: no instant in which two
+        # sessions hold the same token. The displaced session is returned rather
+        # than closed because close() takes this same lock.
+        async with self._lock:
+            displaced = next(
+                (s for s in self._sessions.values() if s.connection.token_id == session.connection.token_id),
+                None,
+            )
+            if displaced is not None:
+                self._sessions.pop(displaced.ws_id, None)
+                if displaced.voice_channel_id is not None:
+                    self._discard_from_channel(displaced.voice_channel_id, displaced.ws_id)
+            self._sessions[session.ws_id] = session
+            return True, displaced
 
     async def unregister(self, ws_id: str) -> None:
         async with self._lock:

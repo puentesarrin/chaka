@@ -3,10 +3,29 @@ from unittest.mock import AsyncMock
 from chaka import interfaces, manager, types
 
 
-async def test_connect_rejects_duplicate_token(make_ws, make_conn):
+async def test_a_second_connection_displaces_the_first(make_ws, make_conn):
     m = manager.ConnectionManager()
-    assert await m.connect(make_ws(), make_conn(token_id=1)) is not None
-    assert await m.connect(make_ws(), make_conn(token_id=1)) is None
+    first_ws = make_ws()
+    first, displaced = await m.connect(first_ws, make_conn(token_id=1))
+    assert first is not None and displaced is None
+
+    second, displaced = await m.connect(make_ws(), make_conn(token_id=1))
+
+    assert second is not None and second != first
+    assert displaced is not None and displaced.ws_id == first
+    assert displaced.websocket is first_ws
+    # And exactly one session survives: the rule is unchanged.
+    assert [s.ws_id for s in await m.backend.sessions()] == [second]
+
+
+async def test_displacing_leaves_other_tokens_alone(make_ws, make_conn):
+    m = manager.ConnectionManager()
+    other, _ = await m.connect(make_ws(), make_conn(token_id=2))
+
+    _, displaced = await m.connect(make_ws(), make_conn(token_id=1))
+
+    assert displaced is None
+    assert other in [s.ws_id for s in await m.backend.sessions()]
 
 
 async def test_default_voice_log_is_null():
@@ -34,8 +53,8 @@ async def test_broadcast_delivers_and_returns_recipients(make_ws, make_conn):
 async def test_join_emits_presence_frames(make_ws, make_conn):
     m = manager.ConnectionManager()
     a, b = make_ws(), make_ws()
-    wa = await m.connect(a, make_conn(token_id=1, name='A'))
-    wb = await m.connect(b, make_conn(token_id=2, name='B'))
+    wa, _ = await m.connect(a, make_conn(token_id=1, name='A'))
+    wb, _ = await m.connect(b, make_conn(token_id=2, name='B'))
     await m.join_voice_channel(wa, 5)
     a.text_frames.clear()
     await m.join_voice_channel(wb, 5)
@@ -50,8 +69,8 @@ async def test_relay_started_logs_and_streams(make_ws, make_conn):
     voice_log.start.return_value = 99
     m = manager.ConnectionManager(voice_log=voice_log)
     a, b = make_ws(), make_ws()
-    wa = await m.connect(a, make_conn(token_id=1, name='A'))
-    wb = await m.connect(b, make_conn(token_id=2, name='B'))
+    wa, _ = await m.connect(a, make_conn(token_id=1, name='A'))
+    wb, _ = await m.connect(b, make_conn(token_id=2, name='B'))
     await m.join_voice_channel(wa, 5)
     await m.join_voice_channel(wb, 5)
     b.text_frames.clear()
@@ -71,8 +90,8 @@ async def test_relay_started_logs_and_streams(make_ws, make_conn):
 async def test_relay_busy_when_channel_taken(make_ws, make_conn):
     m = manager.ConnectionManager()
     a, b = make_ws(), make_ws()
-    wa = await m.connect(a, make_conn(token_id=1, name='A'))
-    wb = await m.connect(b, make_conn(token_id=2, name='B'))
+    wa, _ = await m.connect(a, make_conn(token_id=1, name='A'))
+    wb, _ = await m.connect(b, make_conn(token_id=2, name='B'))
     await m.join_voice_channel(wa, 5)
     await m.join_voice_channel(wb, 5)
     await m.relay_voice(wa, 1, 'A', b'x')  # A owns the channel
@@ -84,8 +103,8 @@ async def test_relay_busy_when_channel_taken(make_ws, make_conn):
 async def test_set_voice_muted_notifies_peers_and_updates_stats(make_ws, make_conn):
     m = manager.ConnectionManager()
     a, b = make_ws(), make_ws()
-    wa = await m.connect(a, make_conn(token_id=1, name='A'))
-    wb = await m.connect(b, make_conn(token_id=2, name='B'))
+    wa, _ = await m.connect(a, make_conn(token_id=1, name='A'))
+    wb, _ = await m.connect(b, make_conn(token_id=2, name='B'))
     await m.join_voice_channel(wa, 5)
     await m.join_voice_channel(wb, 5)
     b.text_frames.clear()
@@ -98,7 +117,7 @@ async def test_set_voice_muted_notifies_peers_and_updates_stats(make_ws, make_co
 async def test_revoke_voice_permission(make_ws, make_conn):
     m = manager.ConnectionManager()
     ws = make_ws()
-    wsid = await m.connect(ws, make_conn(token_id=1, can_talk=True, can_hear=True))
+    wsid, _ = await m.connect(ws, make_conn(token_id=1, can_talk=True, can_hear=True))
     await m.join_voice_channel(wsid, 5)
     ws.text_frames.clear()
     await m.revoke_voice_permission_by_token_id(1)
@@ -143,8 +162,8 @@ async def test_broadcast_to_voice_clients_reaches_can_hear(make_ws, make_conn):
 async def test_leave_voice_channel_notifies_remaining_peer(make_ws, make_conn):
     m = manager.ConnectionManager()
     a, b = make_ws(), make_ws()
-    wa = await m.connect(a, make_conn(token_id=1, name='A'))
-    wb = await m.connect(b, make_conn(token_id=2, name='B'))
+    wa, _ = await m.connect(a, make_conn(token_id=1, name='A'))
+    wb, _ = await m.connect(b, make_conn(token_id=2, name='B'))
     await m.join_voice_channel(wa, 5)
     await m.join_voice_channel(wb, 5)
     b.text_frames.clear()
@@ -156,7 +175,7 @@ async def test_leave_voice_channel_notifies_remaining_peer(make_ws, make_conn):
 async def test_set_voice_muted_noop_when_unchanged(make_ws, make_conn):
     m = manager.ConnectionManager()
     ws = make_ws()
-    wsid = await m.connect(ws, make_conn(token_id=1))
+    wsid, _ = await m.connect(ws, make_conn(token_id=1))
     await m.join_voice_channel(wsid, 5)
     ws.text_frames.clear()
     await m.set_voice_muted(wsid, False)  # already unmuted -> no frame
@@ -171,3 +190,52 @@ async def test_voice_ops_on_unknown_ws_are_noops(make_ws, make_conn):
     await m.set_voice_muted('ghost', True)
     await m.relay_voice('ghost', 1, 't', b'x')
     await m.end_voice_transmission('ghost')
+
+
+async def test_displacing_frees_the_voice_channel(make_ws, make_conn):
+    # Otherwise the reconnecting client finds its own channel occupied by the ghost.
+    m = manager.ConnectionManager()
+    first, _ = await m.connect(make_ws(), make_conn(token_id=1, can_talk=True))
+    await m.join_voice_channel(first, 1)
+
+    second, displaced = await m.connect(make_ws(), make_conn(token_id=1, can_talk=True))
+
+    assert displaced is not None
+    sessions = await m.backend.sessions()
+    assert [s.ws_id for s in sessions] == [second]
+    assert sessions[0].voice_channel_id is None
+
+
+async def test_displacing_tells_the_peers_the_ghost_left(make_ws, make_conn):
+    # The displaced handler cannot do this itself: by the time it wakes up its
+    # session is out of the registry and every teardown call is a no-op.
+    m = manager.ConnectionManager()
+    a, b = make_ws(), make_ws()
+    wa, _ = await m.connect(a, make_conn(token_id=1, name='A'))
+    wb, _ = await m.connect(b, make_conn(token_id=2, name='B'))
+    await m.join_voice_channel(wa, 5)
+    await m.join_voice_channel(wb, 5)
+    b.text_frames.clear()
+
+    await m.connect(make_ws(), make_conn(token_id=1, name='A'))
+
+    assert 'voice_peer_left' in b.sent_types()
+
+
+async def test_displacing_closes_an_open_transmission(make_ws, make_conn):
+    # Otherwise the voice_log row stays open forever and peers never hear silence.
+    voice_log = AsyncMock()
+    voice_log.start.return_value = 99
+    m = manager.ConnectionManager(voice_log=voice_log)
+    a, b = make_ws(), make_ws()
+    wa, _ = await m.connect(a, make_conn(token_id=1, name='A'))
+    wb, _ = await m.connect(b, make_conn(token_id=2, name='B'))
+    await m.join_voice_channel(wa, 5)
+    await m.join_voice_channel(wb, 5)
+    await m.relay_voice(wa, 1, 'A', b'audio')
+    b.text_frames.clear()
+
+    await m.connect(make_ws(), make_conn(token_id=1, name='A'))
+
+    assert 'silent' in b.sent_types()
+    voice_log.end.assert_awaited_once_with(99, bytes_relayed=5)

@@ -5,6 +5,21 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- Close code **`4410`** for a displaced connection, so a client can tell "you were replaced" from "your network dropped". A client that receives it was replaced deliberately and should **not** reconnect immediately; every other kind of drop reconnects as before. See `PROTOCOL.md`.
+- `IBackend.register_displacing()` performs the take-over. It ships with a default implementation built from the existing primitives, so a backend written against the previous interface keeps working; `InMemoryBackend` overrides it to do the eviction and the registration under one lock, leaving no instant in which two sessions hold the same token.
+- Disconnect logging records the token, how long the connection was held and the WebSocket close code. It previously logged only the `ws_id`, which is why diagnosing a disconnection problem needed external probes rather than the logs.
+
+### Changed
+
+- **A reconnecting client now displaces the older connection instead of being rejected.** One connection per token is unchanged — the newcomer wins rather than the incumbent. When a socket dies silently the server only learns of it when its ping times out, and until then the client was locked out: measured on a live deployment at a median of 17 seconds and up to 24, against 625 rejections for 123 connections in a day. Preferring a session that may be a ghost over a client that is demonstrably present had it backwards.
+- Displacing a session that is in a voice channel now runs the same teardown a normal disconnect does: its peers get `voice_peer_left`, and an open transmission is ended and its `voice_log` row closed. The displaced handler cannot do this itself — by the time it wakes up its session is already out of the registry and every teardown call is a no-op.
+- `IConnectionManager.connect()` now returns `(ws_id, displaced)`. The displaced session is handed back rather than closed, because closing needs the same lock the registry holds. **Breaking for anyone implementing the interface**; the shipped manager and handler are updated.
+- `4409` is now returned only when registration genuinely fails, which should not happen in normal operation. A reconnecting client used to receive it and no longer does.
+
 ## [0.4.0] - 2026-08-26
 
 ### Added

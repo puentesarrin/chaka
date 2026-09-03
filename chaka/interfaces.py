@@ -8,7 +8,7 @@ injected via ``create_app(manager=..., handler=...)`` or the factory's
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 from fastapi import WebSocket
 
@@ -26,6 +26,21 @@ class IBackend(ABC):
 
     @abstractmethod
     async def register(self, session: types.ClientSession) -> bool: ...
+
+    async def register_displacing(self, session: types.ClientSession) -> Tuple[bool, Optional[types.ClientSession]]:
+        """Register `session`, evicting any existing one on the same token.
+
+        Returns ``(registered, displaced)``; the displaced session is returned
+        rather than closed, because closing usually needs the lock the backend
+        holds here. Implementations should be atomic: the default below keeps a
+        backend written against the previous interface working, but two
+        registrations can race, and a failing `register` loses both connections.
+        """
+        ws_id = await self.find_ws_id_by_token(session.connection.token_id)
+        displaced = await self.get(ws_id) if ws_id is not None else None
+        if ws_id is not None:
+            await self.unregister(ws_id)
+        return await self.register(session), displaced
 
     @abstractmethod
     async def unregister(self, ws_id: str) -> None: ...
@@ -97,7 +112,10 @@ class IConnectionManager(ABC):
     """Owns live connections, broadcast fan-out, and voice-channel state."""
 
     @abstractmethod
-    async def connect(self, websocket: WebSocket, connection: types.ClientConnection) -> Optional[str]: ...
+    async def connect(
+        self, websocket: WebSocket, connection: types.ClientConnection
+    ) -> Tuple[Optional[str], Optional[types.ClientSession]]:
+        """Returns ``(ws_id, displaced)``; the caller closes the displaced socket."""
 
     @abstractmethod
     async def disconnect(self, ws_id: str) -> None: ...

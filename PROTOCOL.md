@@ -18,7 +18,8 @@ Transports:
 WebSocket close codes:
 
 - `4401` — invalid or inactive token (checked at connect; permissions are **not** checked at connect, only per action)
-- `4409` — token already connected (one connection per token enforced)
+- `4409` — could not register the connection. Should not happen in normal operation; a reconnecting client used to receive this and no longer does.
+- `4410` — **displaced**: another connection presented the same token and took over. One connection per token is still enforced; what changed is that the newcomer wins rather than being turned away. A client that receives `4410` was replaced **deliberately** and should **not** reconnect immediately — two genuine clients on one token would flap. A client that loses its socket any other way reconnects as before, and is now accepted at once instead of waiting for the server to notice the dead one.
 - `1008` — connection closed by the server because the token was revoked or regenerated
 
 ---
